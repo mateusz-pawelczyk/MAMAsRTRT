@@ -1,4 +1,4 @@
-﻿  TopLevelASGenerator.cpp
+﻿  D3D12HelloTriangle.cpp
   D3D12HelloTriangle.vcxproj -> C:\Users\ma2880pa-s\Program\MAMAsRTRT\bin\x64\Debug\D3D12HelloTriangle.exe
   Copy dxcompiler.dll and dxil.dll to target folder
   
@@ -6,7 +6,7 @@
      ROBOCOPY     ::     Robust File Copy for Windows                              
   -------------------------------------------------------------------------------
   
-    Started : den 22 november 2023 18:17:56
+    Started : den 22 november 2023 20:21:16
      Source : C:\Program Files (x86)\Windows Kits\10\bin\10.0.17763.0\x64\
        Dest : C:\Users\ma2880pa-s\Program\MAMAsRTRT\bin\x64\Debug\
   
@@ -18,36 +18,13 @@
   ------------------------------------------------------------------------------
   
   	                   2	C:\Program Files (x86)\Windows Kits\10\bin\10.0.17763.0\x64\
-  	    New File  		  11.8 m	dxcompiler.dll
-    8.4%
-   16.9%
-   25.4%
-   33.8%
-   42.3%
-   50.8%
-   59.2%
-   67.7%
-   76.2%
-   84.6%
-   93.1%
-  100%  
-  	    New File  		   1.0 m	dxil.dll
-   23%  
-   47%  
-   71%  
-   95%  
-  100%  
   
   ------------------------------------------------------------------------------
   
                  Total    Copied   Skipped  Mismatch    FAILED    Extras
       Dirs :         1         0         1         0         0         0
-     Files :         2         2         0         0         0         0
-     Bytes :   12.85 m   12.85 m         0         0         0         0
+     Files :         2         0         2         0         0         0
+     Bytes :   12.85 m         0   12.85 m         0         0         0
      Times :   0:00:00   0:00:00                       0:00:00   0:00:00
-  
-  
-     Speed :           962720000 Bytes/sec.
-     Speed :           55087.280 MegaBytes/min.
-     Ended : den 22 november 2023 18:17:56
+     Ended : den 22 november 2023 20:21:16
   

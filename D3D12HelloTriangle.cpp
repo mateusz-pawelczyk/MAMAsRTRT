@@ -261,10 +261,14 @@ void D3D12HelloTriangle::LoadAssets() {
 
     // Define the vertex input layout.
     D3D12_INPUT_ELEMENT_DESC inputElementDescs[] = {
-        {"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0,
-         D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
-        {"COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 12,
-         D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0}};
+		// SemanticName, SemanticIndex, Format, InputSlot, AlignedByteOffset, InputSlotClass, InstanceDataStepRate
+		{"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
+		{"COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
+		{"NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 28, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
+		{"TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 40, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
+		{"TANGENT", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 48, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
+		{"BINORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 60, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0}
+		};
 
     // Describe and create the graphics pipeline state object (PSO).
     D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc = {};
@@ -338,6 +342,7 @@ void D3D12HelloTriangle::LoadAssets() {
 
     // #DXR Extra: Indexed Geometry
     CreateMengerSpongeVB();
+    CreateSphere(0.2f, 20u, 20u);
 
     //----------------------------------------------------------------------------------------------
     // Indices
@@ -497,9 +502,13 @@ void D3D12HelloTriangle::PopulateCommandList() {
 
     // #DXR Extra: Indexed Geometry
     // In a way similar to triangle rendering, rasterize the Menger Sponge
-    m_commandList->IASetVertexBuffers(0, 1, &m_mengerVBView);
-    m_commandList->IASetIndexBuffer(&m_mengerIBView);
-    m_commandList->DrawIndexedInstanced(m_mengerIndexCount, 1, 0, 0, 0);
+    //m_commandList->IASetVertexBuffers(0, 1, &m_mengerVBView);
+    //m_commandList->IASetIndexBuffer(&m_mengerIBView);
+    //m_commandList->DrawIndexedInstanced(m_mengerIndexCount, 1, 0, 0, 0);
+
+	m_commandList->IASetVertexBuffers(0, 1, &m_sphereVBView);
+	m_commandList->IASetIndexBuffer(&m_sphereIBView);
+	m_commandList->DrawIndexedInstanced(m_sphereIndexCount, 1, 0, 0, 0);
 
     // Instance index in the per-instance properties buffer, 3rd parameter of
     // the root signature Here we set the value to 0, and since we have only 1
@@ -789,6 +798,10 @@ void D3D12HelloTriangle::CreateAccelerationStructures() {
       CreateBottomLevelAS({{m_mengerVB.Get(), m_mengerVertexCount}},
                           {{m_mengerIB.Get(), m_mengerIndexCount}});
 
+  AccelerationStructureBuffers sphereBottomLevelBuffers =
+	  CreateBottomLevelAS({ {m_sphereVB.Get(), m_sphereVertexCount} },
+		  { {m_sphereIB.Get(), m_sphereIndexCount} });
+
   // #DXR Extra: Per-Instance Data
   AccelerationStructureBuffers planeBottomLevelBuffers =
       CreateBottomLevelAS({{m_planeBuffer.Get(), 6}});
@@ -799,6 +812,7 @@ void D3D12HelloTriangle::CreateAccelerationStructures() {
   // 3 instances of the triangle + a plane
   m_instances = {
       {mengerBottomLevelBuffers.pResult, XMMatrixIdentity()},
+      {sphereBottomLevelBuffers.pResult, XMMatrixTranslation(1.f, 0, 0)},
       //{bottomLevelBuffers.pResult, XMMatrixTranslation(.6f, 0, 0)},
       //{bottomLevelBuffers.pResult, XMMatrixTranslation(-.6f, 0, 0)},
       // #DXR Extra: Per-Instance Data
@@ -1116,6 +1130,16 @@ void D3D12HelloTriangle::CreateShaderBindingTable() {
          (void *)(m_perInstanceConstantBuffers[0]->GetGPUVirtualAddress())});
     // #DXR Extra - Another ray type
     m_sbtHelper.AddHitGroup(L"ShadowHitGroup", {});
+  }
+
+  {
+	  m_sbtHelper.AddHitGroup(
+		  L"HitGroup",
+		  { (void*)(m_sphereVB->GetGPUVirtualAddress()),
+		   (void*)(m_sphereIB->GetGPUVirtualAddress()),
+		   (void*)(m_perInstanceConstantBuffers[0]->GetGPUVirtualAddress()) });
+	  // #DXR Extra - Another ray type
+	  m_sbtHelper.AddHitGroup(L"ShadowHitGroup", {});
   }
 
   // The plane also uses a constant buffer for its vertex colors
@@ -1488,6 +1512,173 @@ void D3D12HelloTriangle::CreateMengerSpongeVB() {
     m_mengerVertexCount = static_cast<UINT>(vertices.size());
   }
 }
+
+void D3D12HelloTriangle::CreateSphere(float const radius, unsigned int const longitude_split_count, unsigned int const latitude_split_count)
+{
+	auto const longitude_slice_edges_count = longitude_split_count + 1u;
+	auto const latitude_slice_edges_count = latitude_split_count + 1u;
+	auto const longitude_slice_vertices_count = longitude_slice_edges_count + 1u;
+	auto const latitude_slice_vertices_count = latitude_slice_edges_count + 1u;
+	auto const vertices_nb = longitude_slice_vertices_count * latitude_slice_vertices_count;
+
+	auto vertices = std::vector<Vertex>(vertices_nb);
+
+
+
+	size_t index = 0u;
+	float d_theta = glm::two_pi<float>() / static_cast<float>(latitude_slice_edges_count);
+	float d_phi = glm::pi<float>() / static_cast<float>(longitude_slice_edges_count);
+
+	float phi = 0.0f;
+
+	for (unsigned int i = 0u; i < longitude_slice_vertices_count; ++i)
+	{
+		float const cos_phi = std::cos(phi);
+		float const sin_phi = std::sin(phi);
+
+		float theta = 0.0f;
+		for (unsigned int j = 0u; j < latitude_slice_vertices_count; ++j)
+		{
+			float const cos_theta = std::cos(theta);
+			float const sin_theta = std::sin(theta);
+
+			// vertex
+			vertices[index].position = { radius * sin_theta * sin_phi,
+				-radius * cos_phi,
+				radius * cos_theta * sin_phi };
+
+			//std::cout << "Position (x, y, z): " << "(" << vertices[index][0] << ", " << vertices[index][1] << ", " << vertices[index][2] << ")\n\n";
+
+			// texture coordinates
+			vertices[index].texcoord = { static_cast<float>(j) / (static_cast<float>(latitude_slice_vertices_count)),
+				static_cast<float>(i) / (static_cast<float>(longitude_slice_vertices_count))};
+
+			// tangent
+			auto const t = glm::normalize(glm::vec3(radius * cos_theta, 0.0f, -radius * sin_theta));
+			// Convert glm::vec3 to DirectX::XMFLOAT3
+			DirectX::XMFLOAT3 dxTangent;
+			dxTangent.x = t.x;
+			dxTangent.y = t.y;
+			dxTangent.z = t.z;
+
+			// Store the result
+			vertices[index].tangent = dxTangent; // assuming tangents is an array of DirectX::XMFLOAT3
+
+			// binormal
+			auto const b = glm::normalize(glm::vec3(radius * sin_theta * cos_phi, radius * sin_phi, radius * cos_theta * cos_phi));
+			// Convert glm::vec3 to DirectX::XMFLOAT3
+			DirectX::XMFLOAT3 dxBinormal;
+			dxBinormal.x = t.x;
+			dxBinormal.y = t.y;
+			dxBinormal.z = t.z;
+			vertices[index].binormal = dxBinormal;
+
+			// normal
+			auto const n = glm::normalize(glm::cross(t, b));
+			DirectX::XMFLOAT3 dxNormal;
+			dxNormal.x = t.x;
+			dxNormal.y = t.y;
+			dxNormal.z = t.z;
+			vertices[index].normal = dxNormal;
+
+
+
+			++index;
+			theta += d_theta;
+		}
+
+		phi += d_phi;
+	}
+
+	// create index array
+	auto indices = std::vector<UINT>(3 * 2 * latitude_slice_edges_count * longitude_slice_edges_count);
+
+
+	// generate indices iteratively
+	index = 0u;
+	for (unsigned int i = 0u; i < longitude_slice_edges_count; ++i)
+	{
+		for (unsigned int j = 0u; j < latitude_slice_edges_count; ++j)
+		{
+			indices[index++] = latitude_slice_vertices_count * (i + 0u) + (j + 0u);
+			indices[index++] = latitude_slice_vertices_count * (i + 0u) + (j + 1u);
+			indices[index++] = latitude_slice_vertices_count * (i + 1u) + (j + 1u);
+
+			indices[index++] = latitude_slice_vertices_count * (i + 0u) + (j + 0u);
+			indices[index++] = latitude_slice_vertices_count * (i + 1u) + (j + 1u);
+			indices[index++] = latitude_slice_vertices_count * (i + 1u) + (j + 0u);
+		}
+	}
+
+
+	{
+		const UINT sphereVBSize =
+			static_cast<UINT>(vertices.size()) * sizeof(Vertex);
+
+		// Note: using upload heaps to transfer static data like vert buffers is not
+		// recommended. Every time the GPU needs it, the upload heap will be
+		// marshalled over. Please read up on Default Heap usage. An upload heap is
+		// used here for code simplicity and because there are very few verts to
+		// actually transfer.
+		CD3DX12_HEAP_PROPERTIES heapProperty =
+			CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
+		CD3DX12_RESOURCE_DESC bufferResource =
+			CD3DX12_RESOURCE_DESC::Buffer(sphereVBSize);
+		ThrowIfFailed(m_device->CreateCommittedResource(
+			&heapProperty, D3D12_HEAP_FLAG_NONE, &bufferResource, //
+			D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, IID_PPV_ARGS(&m_sphereVB)));
+
+		// Copy the triangle data to the vertex buffer.
+		UINT8* pVertexDataBegin;
+		CD3DX12_RANGE readRange(
+			0, 0); // We do not intend to read from this resource on the CPU.
+		ThrowIfFailed(m_sphereVB->Map(
+			0, &readRange, reinterpret_cast<void**>(&pVertexDataBegin)));
+		memcpy(pVertexDataBegin, vertices.data(), sphereVBSize);
+		m_sphereVB->Unmap(0, nullptr);
+		
+		// Initialize the vertex buffer view.
+		m_sphereVBView.BufferLocation = m_sphereVB->GetGPUVirtualAddress();
+		m_sphereVBView.StrideInBytes = sizeof(Vertex);
+		m_sphereVBView.SizeInBytes = sphereVBSize;
+	}
+	{
+		const UINT sphereIBSize = static_cast<UINT>(indices.size()) * sizeof(UINT);
+
+		// Note: using upload heaps to transfer static data like vert buffers is not
+		// recommended. Every time the GPU needs it, the upload heap will be
+		// marshalled over. Please read up on Default Heap usage. An upload heap is
+		// used here for code simplicity and because there are very few verts to
+		// actually transfer.
+		CD3DX12_HEAP_PROPERTIES heapProperty =
+			CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
+		CD3DX12_RESOURCE_DESC bufferResource =
+			CD3DX12_RESOURCE_DESC::Buffer(sphereIBSize);
+		ThrowIfFailed(m_device->CreateCommittedResource(
+			&heapProperty, D3D12_HEAP_FLAG_NONE, &bufferResource, //
+			D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, IID_PPV_ARGS(&m_sphereIB)));
+
+		// Copy the triangle data to the index buffer.
+		UINT8* pIndexDataBegin;
+		CD3DX12_RANGE readRange(
+			0, 0); // We do not intend to read from this resource on the CPU.
+		ThrowIfFailed(m_sphereIB->Map(0, &readRange,
+			reinterpret_cast<void**>(&pIndexDataBegin)));
+		memcpy(pIndexDataBegin, indices.data(), sphereIBSize);
+		m_sphereIB->Unmap(0, nullptr);
+
+		// Initialize the index buffer view.
+		m_sphereIBView.BufferLocation = m_sphereIB->GetGPUVirtualAddress();
+		m_sphereIBView.Format = DXGI_FORMAT_R32_UINT;
+		m_sphereIBView.SizeInBytes = sphereIBSize;
+
+		m_sphereIndexCount = static_cast<UINT>(indices.size());
+		m_sphereVertexCount = static_cast<UINT>(vertices.size());
+	}
+
+
+}
+
 
 //--------------------------------------------------------------------------------------------------
 // Allocate memory to hold per-instance information

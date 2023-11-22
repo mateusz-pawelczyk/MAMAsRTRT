@@ -41,12 +41,27 @@ private:
   static const UINT FrameCount = 2;
 
   struct Vertex {
-    XMFLOAT3 position;
-    XMFLOAT4 color;
+	  DirectX::XMFLOAT3 position; // 3D position
+	  DirectX::XMFLOAT4 color;    // RGBA color
+	  DirectX::XMFLOAT3 normal;   // Normal vector
+	  DirectX::XMFLOAT2 texcoord; // Texture coordinates
+	  DirectX::XMFLOAT3 tangent;  // Tangent vector
+	  DirectX::XMFLOAT3 binormal; // Binormal vector
+	  Vertex() : color({ 1.0, 0.0, 0.0, 1.0 }) {}
     // #DXR Extra: Indexed Geometry
     Vertex(XMFLOAT4 pos, XMFLOAT4 /*n*/, XMFLOAT4 col)
         : position(pos.x, pos.y, pos.z), color(col) {}
     Vertex(XMFLOAT3 pos, XMFLOAT4 col) : position(pos), color(col) {}
+	Vertex(XMFLOAT3 pos, XMFLOAT4 col, XMFLOAT3 normal, XMFLOAT2 texcoord, XMFLOAT3 tangent, XMFLOAT3 binormal) : position(pos), color(col), normal(normal), texcoord(texcoord), tangent(tangent), binormal(binormal) {}
+  };
+
+  struct ParametricShapeData {
+	  XMFLOAT3 vertex;
+	  XMFLOAT3 normal;
+	  XMFLOAT3 texcoord;
+	  XMFLOAT3 tangent;
+	  XMFLOAT3 binormal;
+	  XMFLOAT4 color;
   };
 
   // Pipeline objects.
@@ -184,6 +199,8 @@ private:
 
   // #DXR Extra: Indexed Geometry
   void CreateMengerSpongeVB();
+  void CreateSphere(float const radius, unsigned int const longitude_split_count, unsigned int const latitude_split_count);
+
   ComPtr<ID3D12Resource> m_mengerVB;
   ComPtr<ID3D12Resource> m_mengerIB;
   D3D12_VERTEX_BUFFER_VIEW m_mengerVBView;
@@ -191,6 +208,15 @@ private:
 
   UINT m_mengerIndexCount;
   UINT m_mengerVertexCount;
+
+
+  ComPtr<ID3D12Resource> m_sphereVB;
+  ComPtr<ID3D12Resource> m_sphereIB;
+  D3D12_VERTEX_BUFFER_VIEW m_sphereVBView;
+  D3D12_INDEX_BUFFER_VIEW m_sphereIBView;
+
+  UINT m_sphereIndexCount;
+  UINT m_sphereVertexCount;
 
   // #DXR Extra - Another ray type
   ComPtr<IDxcBlob> m_shadowLibrary;

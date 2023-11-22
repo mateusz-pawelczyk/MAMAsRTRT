@@ -12,6 +12,10 @@ RaytracingAccelerationStructure SceneBVH : register(t2);
 struct STriVertex {
   float3 vertex;
   float4 color;
+  float3 normal;   // Normal vector
+  float2 texcoord; // Texture coordinates
+  float3 tangent;  // Tangent vector
+  float3 binormal; // Binormal vector
 };
 
 // #DXR Extra: Per-Instance Data
