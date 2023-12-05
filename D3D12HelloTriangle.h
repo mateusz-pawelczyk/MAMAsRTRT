@@ -19,6 +19,7 @@
 #include "nv_helpers_dx12/ShaderBindingTableGenerator.h"
 #include "nv_helpers_dx12/TopLevelASGenerator.h"
 
+
 using namespace DirectX;
 
 // Note that while ComPtr is used to manage the lifetime of resources on the
@@ -39,7 +40,7 @@ public:
 
 private:
   static const UINT FrameCount = 2;
-
+  void loadOBJ();
   struct Vertex {
 	  DirectX::XMFLOAT3 position; // 3D position
 	  DirectX::XMFLOAT4 color;    // RGBA color
@@ -47,12 +48,22 @@ private:
 	  DirectX::XMFLOAT2 texcoord; // Texture coordinates
 	  DirectX::XMFLOAT3 tangent;  // Tangent vector
 	  DirectX::XMFLOAT3 binormal; // Binormal vector
-	  Vertex() : color({ 1.0, 0.0, 0.0, 1.0 }) {}
+	  Vertex() : color({ 1.0, 0.5, 0.7, 1.0 }) {}
     // #DXR Extra: Indexed Geometry
     Vertex(XMFLOAT4 pos, XMFLOAT4 /*n*/, XMFLOAT4 col)
         : position(pos.x, pos.y, pos.z), color(col) {}
     Vertex(XMFLOAT3 pos, XMFLOAT4 col) : position(pos), color(col) {}
 	Vertex(XMFLOAT3 pos, XMFLOAT4 col, XMFLOAT3 normal, XMFLOAT2 texcoord, XMFLOAT3 tangent, XMFLOAT3 binormal) : position(pos), color(col), normal(normal), texcoord(texcoord), tangent(tangent), binormal(binormal) {}
+  };
+
+  struct Mesh {
+	  ComPtr<ID3D12Resource> vertexBuffer;
+	  ComPtr<ID3D12Resource> indexBuffer;
+	  D3D12_VERTEX_BUFFER_VIEW vertexBufferView;
+	  D3D12_INDEX_BUFFER_VIEW indexBufferView;
+
+	  UINT indexCount;
+	  UINT vertexCount;
   };
 
   struct ParametricShapeData {
@@ -62,6 +73,11 @@ private:
 	  XMFLOAT3 tangent;
 	  XMFLOAT3 binormal;
 	  XMFLOAT4 color;
+  };
+
+  struct Sphere {
+	  XMFLOAT3 center;
+	  float    radius;
   };
 
   // Pipeline objects.
@@ -137,16 +153,20 @@ private:
   ComPtr<ID3D12RootSignature> CreateRayGenSignature();
   ComPtr<ID3D12RootSignature> CreateMissSignature();
   ComPtr<ID3D12RootSignature> CreateHitSignature();
+  ComPtr<ID3D12RootSignature> CreateSphereHitGroupSignature();
 
   void CreateRaytracingPipeline();
 
   ComPtr<IDxcBlob> m_rayGenLibrary;
   ComPtr<IDxcBlob> m_hitLibrary;
   ComPtr<IDxcBlob> m_missLibrary;
+  ComPtr<IDxcBlob> m_sphereHitLibrary;
+  ComPtr<IDxcBlob> m_sphereIntersectionLibrary;
 
   ComPtr<ID3D12RootSignature> m_rayGenSignature;
   ComPtr<ID3D12RootSignature> m_hitSignature;
   ComPtr<ID3D12RootSignature> m_missSignature;
+  ComPtr<ID3D12RootSignature> m_sphereHitGroupSignature;
 
   // Ray tracing pipeline state
   ComPtr<ID3D12StateObject> m_rtStateObject;
@@ -209,14 +229,9 @@ private:
   UINT m_mengerIndexCount;
   UINT m_mengerVertexCount;
 
+  Mesh m_sphereMesh;
 
-  ComPtr<ID3D12Resource> m_sphereVB;
-  ComPtr<ID3D12Resource> m_sphereIB;
-  D3D12_VERTEX_BUFFER_VIEW m_sphereVBView;
-  D3D12_INDEX_BUFFER_VIEW m_sphereIBView;
 
-  UINT m_sphereIndexCount;
-  UINT m_sphereVertexCount;
 
   // #DXR Extra - Another ray type
   ComPtr<IDxcBlob> m_shadowLibrary;

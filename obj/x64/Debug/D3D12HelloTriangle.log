@@ -1,4 +1,6 @@
 ﻿  D3D12HelloTriangle.cpp
+C:\Users\ma2880pa-s\Program\MAMAsRTRT\D3D12HelloTriangle.h(51): warning C4305: 'argument': truncation from 'double' to 'float'
+C:\Users\ma2880pa-s\Program\MAMAsRTRT\OBJ_Loader.h(949): warning C4244: 'initializing': conversion from 'double' to 'float', possible loss of data
   D3D12HelloTriangle.vcxproj -> C:\Users\ma2880pa-s\Program\MAMAsRTRT\bin\x64\Debug\D3D12HelloTriangle.exe
   Copy dxcompiler.dll and dxil.dll to target folder
   
@@ -6,7 +8,7 @@
      ROBOCOPY     ::     Robust File Copy for Windows                              
   -------------------------------------------------------------------------------
   
-    Started : den 22 november 2023 20:21:16
+    Started : den 5 december 2023 15:34:23
      Source : C:\Program Files (x86)\Windows Kits\10\bin\10.0.17763.0\x64\
        Dest : C:\Users\ma2880pa-s\Program\MAMAsRTRT\bin\x64\Debug\
   
@@ -26,5 +28,5 @@
      Files :         2         0         2         0         0         0
      Bytes :   12.85 m         0   12.85 m         0         0         0
      Times :   0:00:00   0:00:00                       0:00:00   0:00:00
-     Ended : den 22 november 2023 20:21:16
+     Ended : den 5 december 2023 15:34:23
   

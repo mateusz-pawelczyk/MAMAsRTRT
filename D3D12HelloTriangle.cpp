@@ -22,6 +22,8 @@
 #include "glm/gtc/type_ptr.hpp"
 #include "manipulator.h"
 
+#include "OBJ_Loader.h"
+
 D3D12HelloTriangle::D3D12HelloTriangle(UINT width, UINT height,
                                        std::wstring name)
     : DXSample(width, height, name), m_frameIndex(0),
@@ -78,6 +80,7 @@ void D3D12HelloTriangle::OnInit() {
   // Create the buffer containing the raytracing result (always output in a
   // UAV), and create the heap referencing the resources used by the raytracing,
   // such as the acceleration structure
+  CreateShaderResourceHeap(); // #DXR
   CreateShaderResourceHeap(); // #DXR
 
   // Create the shader binding table and indicating which shaders
@@ -342,7 +345,7 @@ void D3D12HelloTriangle::LoadAssets() {
 
     // #DXR Extra: Indexed Geometry
     CreateMengerSpongeVB();
-    CreateSphere(0.2f, 20u, 20u);
+    CreateSphere(0.2f, 100u, 100u);
 
     //----------------------------------------------------------------------------------------------
     // Indices
@@ -406,10 +409,10 @@ void D3D12HelloTriangle::OnUpdate() {
   // Increment the time counter at each frame, and update the corresponding
   // instance matrix of the first triangle to animate its position
   m_time++;
-  m_instances[0].second =
+ /* m_instances[0].second =
       XMMatrixRotationAxis({0.f, 1.f, 0.f},
                            static_cast<float>(m_time) / 50.0f) *
-      XMMatrixTranslation(0.f, 0.1f * cosf(m_time / 20.f), 0.f);
+      XMMatrixTranslation(0.f, 0.1f * cosf(m_time / 20.f), 0.f);*/
   // #DXR Extra - Refitting
   UpdateInstancePropertiesBuffer();
 }
@@ -506,9 +509,9 @@ void D3D12HelloTriangle::PopulateCommandList() {
     //m_commandList->IASetIndexBuffer(&m_mengerIBView);
     //m_commandList->DrawIndexedInstanced(m_mengerIndexCount, 1, 0, 0, 0);
 
-	m_commandList->IASetVertexBuffers(0, 1, &m_sphereVBView);
-	m_commandList->IASetIndexBuffer(&m_sphereIBView);
-	m_commandList->DrawIndexedInstanced(m_sphereIndexCount, 1, 0, 0, 0);
+	//m_commandList->IASetVertexBuffers(0, 1, &m_sphereVBView);
+	//m_commandList->IASetIndexBuffer(&m_sphereIBView);
+	//m_commandList->DrawIndexedInstanced(m_sphereIndexCount, 1, 0, 0, 0);
 
     // Instance index in the per-instance properties buffer, 3rd parameter of
     // the root signature Here we set the value to 0, and since we have only 1
@@ -799,8 +802,8 @@ void D3D12HelloTriangle::CreateAccelerationStructures() {
                           {{m_mengerIB.Get(), m_mengerIndexCount}});
 
   AccelerationStructureBuffers sphereBottomLevelBuffers =
-	  CreateBottomLevelAS({ {m_sphereVB.Get(), m_sphereVertexCount} },
-		  { {m_sphereIB.Get(), m_sphereIndexCount} });
+	  CreateBottomLevelAS({ {m_sphereMesh.vertexBuffer.Get(), m_sphereMesh.vertexCount} },
+		  { {m_sphereMesh.indexBuffer.Get(), m_sphereMesh.indexCount} });
 
   // #DXR Extra: Per-Instance Data
   AccelerationStructureBuffers planeBottomLevelBuffers =
@@ -811,12 +814,16 @@ void D3D12HelloTriangle::CreateAccelerationStructures() {
   // 3 instances of the triangle
   // 3 instances of the triangle + a plane
   m_instances = {
-      {mengerBottomLevelBuffers.pResult, XMMatrixIdentity()},
-      {sphereBottomLevelBuffers.pResult, XMMatrixTranslation(1.f, 0, 0)},
-      //{bottomLevelBuffers.pResult, XMMatrixTranslation(.6f, 0, 0)},
-      //{bottomLevelBuffers.pResult, XMMatrixTranslation(-.6f, 0, 0)},
-      // #DXR Extra: Per-Instance Data
-      {planeBottomLevelBuffers.pResult, XMMatrixTranslation(0, 0, 0)}};
+	  {mengerBottomLevelBuffers.pResult, XMMatrixTranslation(3.f, 3.0f, 0)},
+	  {sphereBottomLevelBuffers.pResult, XMMatrixIdentity()},
+	  {sphereBottomLevelBuffers.pResult, XMMatrixTranslation(0.6f, 0.01f, 0)},
+
+	  //{bottomLevelBuffers.pResult, XMMatrixTranslation(.6f, 0, 0)},
+	  //{bottomLevelBuffers.pResult, XMMatrixTranslation(-.6f, 0, 0)},
+	  // #DXR Extra: Per-Instance Data
+	  {planeBottomLevelBuffers.pResult, XMMatrixTranslation(0, 0.0, 0)},
+	  {planeBottomLevelBuffers.pResult, XMMatrixRotationX(XM_PIDIV2) * XMMatrixTranslation(0.0, 0.0f, 1.8f)} }; // Adjust position as needed};
+
   CreateTopLevelAS(m_instances);
 
   // Flush the command list and wait for it to finish
@@ -876,11 +883,34 @@ ComPtr<ID3D12RootSignature> D3D12HelloTriangle::CreateHitSignature() {
   // constant buffer. Here we bind the buffer to the first slot, accessible in
   // HLSL as register(b0)
   rsc.AddRootParameter(D3D12_ROOT_PARAMETER_TYPE_CBV, 0);
+
+  // Additional binding for the camera buffer, using a different register, like b1
+  rsc.AddRootParameter(D3D12_ROOT_PARAMETER_TYPE_CBV, 1 /*b1*/); // camera parameters
+  
+
   // #DXR Extra - Another ray type
   // Add a single range pointing to the TLAS in the heap
   rsc.AddHeapRangesParameter({
       {2 /*t2*/, 1, 0, D3D12_DESCRIPTOR_RANGE_TYPE_SRV,
        1 /*2nd slot of the heap*/},
+  });
+  return rsc.Generate(m_device.Get(), true);
+}
+
+ComPtr<ID3D12RootSignature> D3D12HelloTriangle::CreateSphereHitGroupSignature() {
+  nv_helpers_dx12::RootSignatureGenerator rsc;
+
+  rsc.AddRootParameter(D3D12_ROOT_PARAMETER_TYPE_SRV,
+	  0 /*t0*/); // spheres
+
+  // Additional binding for the camera buffer, using a different register, like b1
+  rsc.AddRootParameter(D3D12_ROOT_PARAMETER_TYPE_CBV, 0 /*b0*/); // camera parameters
+
+  // #DXR Extra - Another ray type
+  // Add a single range pointing to the TLAS in the heap
+  rsc.AddHeapRangesParameter({
+	  {0 /*t1*/, 1, 1, D3D12_DESCRIPTOR_RANGE_TYPE_SRV,
+	   2 /*3rd slot of the heap*/},
   });
   return rsc.Generate(m_device.Get(), true);
 }
@@ -913,6 +943,9 @@ void D3D12HelloTriangle::CreateRaytracingPipeline() {
   m_missLibrary = nv_helpers_dx12::CompileShaderLibrary(L"Miss.hlsl");
   m_hitLibrary = nv_helpers_dx12::CompileShaderLibrary(L"Hit.hlsl");
 
+  m_sphereHitLibrary = nv_helpers_dx12::CompileShaderLibrary(L"SphereHit.hlsl");
+  m_sphereIntersectionLibrary = nv_helpers_dx12::CompileShaderLibrary(L"Intersection.hlsl");
+
   // #DXR Extra - Another ray type
   m_shadowLibrary = nv_helpers_dx12::CompileShaderLibrary(L"ShadowRay.hlsl");
   pipeline.AddLibrary(m_shadowLibrary.Get(),
@@ -929,11 +962,15 @@ void D3D12HelloTriangle::CreateRaytracingPipeline() {
   // #DXR Extra: Per-Instance Data
   pipeline.AddLibrary(m_hitLibrary.Get(), {L"ClosestHit", L"PlaneClosestHit"});
 
+  pipeline.AddLibrary(m_sphereHitLibrary.Get(), { L"SphereClosestHit"});
+  pipeline.AddLibrary(m_sphereIntersectionLibrary.Get(), { L"SphereIntersection"});
+
   // To be used, each DX12 shader needs a root signature defining which
   // parameters and buffers will be accessed.
   m_rayGenSignature = CreateRayGenSignature();
   m_missSignature = CreateMissSignature();
   m_hitSignature = CreateHitSignature();
+  m_sphereHitGroupSignature = CreateSphereHitGroupSignature();
 
   // 3 different shaders can be invoked to obtain an intersection: an
   // intersection shader is called
@@ -959,6 +996,8 @@ void D3D12HelloTriangle::CreateRaytracingPipeline() {
   // Hit group for all geometry when hit by a shadow ray
   pipeline.AddHitGroup(L"ShadowHitGroup", L"ShadowClosestHit");
 
+  pipeline.AddHitGroup(L"SphereHitGroup",  L"SphereClosestHit",  L"", L"SphereIntersection" );
+
   // The following section associates the root signature to each shader. Note
   // that we can explicitly show that some shaders share the same root signature
   // (eg. Miss and ShadowMiss). Note that the hit shaders are now only referred
@@ -966,11 +1005,14 @@ void D3D12HelloTriangle::CreateRaytracingPipeline() {
   // closest-hit shaders share the same root signature.
   pipeline.AddRootSignatureAssociation(m_rayGenSignature.Get(), {L"RayGen"});
   pipeline.AddRootSignatureAssociation(m_missSignature.Get(), {L"Miss"});
-  pipeline.AddRootSignatureAssociation(m_hitSignature.Get(), {L"HitGroup"});
+  pipeline.AddRootSignatureAssociation(m_hitSignature.Get(), { L"HitGroup" });
 
   // #DXR Extra - Another ray type
   pipeline.AddRootSignatureAssociation(m_shadowSignature.Get(),
                                        {L"ShadowHitGroup"});
+
+  //pipeline.AddRootSignatureAssociation(m_sphereHitGroupSignature.Get(), { L"SphereHitGroup" });
+
   // #DXR Extra - Another ray type
   pipeline.AddRootSignatureAssociation(m_missSignature.Get(),
                                        {L"Miss", L"ShadowMiss"});
@@ -983,20 +1025,20 @@ void D3D12HelloTriangle::CreateRaytracingPipeline() {
   // exchanged between shaders, such as the HitInfo structure in the HLSL code.
   // It is important to keep this value as low as possible as a too high value
   // would result in unnecessary memory consumption and cache trashing.
-  pipeline.SetMaxPayloadSize(4 * sizeof(float)); // RGB + distance
+  pipeline.SetMaxPayloadSize(4 * sizeof(float) + sizeof(int)); // RGB + distance
 
   // Upon hitting a surface, DXR can provide several attributes to the hit. In
   // our sample we just use the barycentric coordinates defined by the weights
   // u,v of the last two vertices of the triangle. The actual barycentrics can
   // be obtained using float3 barycentrics = float3(1.f-u-v, u, v);
-  pipeline.SetMaxAttributeSize(2 * sizeof(float)); // barycentric coordinates
+  pipeline.SetMaxAttributeSize(2 * sizeof(float)); // barycentric coordinates or uv corrdinates for sphere
 
   // The raytracing process can shoot rays from existing hit points, resulting
   // in nested TraceRay calls. Our sample code traces only primary rays, which
   // then requires a trace depth of 1. Note that this recursion depth should be
   // kept to a minimum for best performance. Path tracing algorithms can be
   // easily flattened into a simple loop in the ray generation.
-  pipeline.SetMaxRecursionDepth(2);
+  pipeline.SetMaxRecursionDepth(6);
 
   // Compile the pipeline for execution on the GPU
   m_rtStateObject = pipeline.Generate();
@@ -1121,13 +1163,15 @@ void D3D12HelloTriangle::CreateShaderBindingTable() {
   // We have 3 triangles, each of which needs to access its own constant buffer
   // as a root parameter in its primary hit shader. The shadow hit only sets a
   // boolean visibility in the payload, and does not require external data
-  // for (int i = 0; i < 3; ++i)
+  //for (int i = 0; i < 3; ++i)
   {
     m_sbtHelper.AddHitGroup(
         L"HitGroup",
         {(void *)(m_mengerVB->GetGPUVirtualAddress()),
          (void *)(m_mengerIB->GetGPUVirtualAddress()),
-         (void *)(m_perInstanceConstantBuffers[0]->GetGPUVirtualAddress())});
+         (void *)(m_perInstanceConstantBuffers[0]->GetGPUVirtualAddress()),
+		 (void *)(m_cameraBuffer->GetGPUVirtualAddress())
+		});
     // #DXR Extra - Another ray type
     m_sbtHelper.AddHitGroup(L"ShadowHitGroup", {});
   }
@@ -1135,17 +1179,38 @@ void D3D12HelloTriangle::CreateShaderBindingTable() {
   {
 	  m_sbtHelper.AddHitGroup(
 		  L"HitGroup",
-		  { (void*)(m_sphereVB->GetGPUVirtualAddress()),
-		   (void*)(m_sphereIB->GetGPUVirtualAddress()),
-		   (void*)(m_perInstanceConstantBuffers[0]->GetGPUVirtualAddress()) });
+		  { (void*)(m_sphereMesh.vertexBuffer->GetGPUVirtualAddress()),
+		   (void*)(m_sphereMesh.indexBuffer->GetGPUVirtualAddress()),
+		   (void*)(m_perInstanceConstantBuffers[0]->GetGPUVirtualAddress()),
+		 (void*)(m_cameraBuffer->GetGPUVirtualAddress()) });
 	  // #DXR Extra - Another ray type
 	  m_sbtHelper.AddHitGroup(L"ShadowHitGroup", {});
   }
+
+  {
+	  m_sbtHelper.AddHitGroup(
+		  L"HitGroup",
+		  { (void*)(m_sphereMesh.vertexBuffer->GetGPUVirtualAddress()),
+		  (void*)(m_sphereMesh.indexBuffer->GetGPUVirtualAddress()),
+		   (void*)(m_perInstanceConstantBuffers[0]->GetGPUVirtualAddress()),
+		 (void*)(m_cameraBuffer->GetGPUVirtualAddress()) });
+	  // #DXR Extra - Another ray type
+	  m_sbtHelper.AddHitGroup(L"ShadowHitGroup", {});
+  }
+
 
   // The plane also uses a constant buffer for its vertex colors
   // #DXR Extra: Per-Instance Data
   // Adding the plane
   m_sbtHelper.AddHitGroup(L"PlaneHitGroup", {heapPointer});
+  // #DXR Extra - Another ray type
+  m_sbtHelper.AddHitGroup(L"ShadowHitGroup", {});
+
+
+  // The plane also uses a constant buffer for its vertex colors
+  // #DXR Extra: Per-Instance Data
+  // Adding the plane
+  m_sbtHelper.AddHitGroup(L"PlaneHitGroup", { heapPointer });
   // #DXR Extra - Another ray type
   m_sbtHelper.AddHitGroup(L"ShadowHitGroup", {});
 
@@ -1398,6 +1463,7 @@ void D3D12HelloTriangle::CreatePerInstanceConstantBuffers() {
   }
 }
 
+
 //-----------------------------------------------------------------------------
 //
 // Create the depth buffer for rasterization. This buffer needs to be kept in a
@@ -1523,8 +1589,6 @@ void D3D12HelloTriangle::CreateSphere(float const radius, unsigned int const lon
 
 	auto vertices = std::vector<Vertex>(vertices_nb);
 
-
-
 	size_t index = 0u;
 	float d_theta = glm::two_pi<float>() / static_cast<float>(latitude_slice_edges_count);
 	float d_phi = glm::pi<float>() / static_cast<float>(longitude_slice_edges_count);
@@ -1568,17 +1632,17 @@ void D3D12HelloTriangle::CreateSphere(float const radius, unsigned int const lon
 			auto const b = glm::normalize(glm::vec3(radius * sin_theta * cos_phi, radius * sin_phi, radius * cos_theta * cos_phi));
 			// Convert glm::vec3 to DirectX::XMFLOAT3
 			DirectX::XMFLOAT3 dxBinormal;
-			dxBinormal.x = t.x;
-			dxBinormal.y = t.y;
-			dxBinormal.z = t.z;
+			dxBinormal.x = b.x;
+			dxBinormal.y = b.y;
+			dxBinormal.z = b.z;
 			vertices[index].binormal = dxBinormal;
 
 			// normal
 			auto const n = glm::normalize(glm::cross(t, b));
 			DirectX::XMFLOAT3 dxNormal;
-			dxNormal.x = t.x;
-			dxNormal.y = t.y;
-			dxNormal.z = t.z;
+			dxNormal.x = n.x;
+			dxNormal.y = n.y;
+			dxNormal.z = n.z;
 			vertices[index].normal = dxNormal;
 
 
@@ -1626,21 +1690,24 @@ void D3D12HelloTriangle::CreateSphere(float const radius, unsigned int const lon
 			CD3DX12_RESOURCE_DESC::Buffer(sphereVBSize);
 		ThrowIfFailed(m_device->CreateCommittedResource(
 			&heapProperty, D3D12_HEAP_FLAG_NONE, &bufferResource, //
-			D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, IID_PPV_ARGS(&m_sphereVB)));
-
+			D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, IID_PPV_ARGS(&m_sphereMesh.vertexBuffer)));
 		// Copy the triangle data to the vertex buffer.
 		UINT8* pVertexDataBegin;
 		CD3DX12_RANGE readRange(
 			0, 0); // We do not intend to read from this resource on the CPU.
-		ThrowIfFailed(m_sphereVB->Map(
+		ThrowIfFailed(m_sphereMesh.vertexBuffer->Map(
 			0, &readRange, reinterpret_cast<void**>(&pVertexDataBegin)));
 		memcpy(pVertexDataBegin, vertices.data(), sphereVBSize);
-		m_sphereVB->Unmap(0, nullptr);
+		m_sphereMesh.vertexBuffer->Unmap(0, nullptr);
 		
 		// Initialize the vertex buffer view.
-		m_sphereVBView.BufferLocation = m_sphereVB->GetGPUVirtualAddress();
-		m_sphereVBView.StrideInBytes = sizeof(Vertex);
-		m_sphereVBView.SizeInBytes = sphereVBSize;
+		m_sphereMesh.vertexBufferView.BufferLocation = m_sphereMesh.vertexBuffer->GetGPUVirtualAddress();
+		m_sphereMesh.vertexBufferView.StrideInBytes = sizeof(Vertex);
+		m_sphereMesh.vertexBufferView.SizeInBytes = sphereVBSize;
+
+		m_sphereMesh.vertexCount = static_cast<UINT>(vertices.size());
+
+
 	}
 	{
 		const UINT sphereIBSize = static_cast<UINT>(indices.size()) * sizeof(UINT);
@@ -1656,24 +1723,24 @@ void D3D12HelloTriangle::CreateSphere(float const radius, unsigned int const lon
 			CD3DX12_RESOURCE_DESC::Buffer(sphereIBSize);
 		ThrowIfFailed(m_device->CreateCommittedResource(
 			&heapProperty, D3D12_HEAP_FLAG_NONE, &bufferResource, //
-			D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, IID_PPV_ARGS(&m_sphereIB)));
+			D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, IID_PPV_ARGS(&m_sphereMesh.indexBuffer)));
 
 		// Copy the triangle data to the index buffer.
 		UINT8* pIndexDataBegin;
 		CD3DX12_RANGE readRange(
 			0, 0); // We do not intend to read from this resource on the CPU.
-		ThrowIfFailed(m_sphereIB->Map(0, &readRange,
+		ThrowIfFailed(m_sphereMesh.indexBuffer->Map(0, &readRange,
 			reinterpret_cast<void**>(&pIndexDataBegin)));
 		memcpy(pIndexDataBegin, indices.data(), sphereIBSize);
-		m_sphereIB->Unmap(0, nullptr);
+		m_sphereMesh.indexBuffer->Unmap(0, nullptr);
 
 		// Initialize the index buffer view.
-		m_sphereIBView.BufferLocation = m_sphereIB->GetGPUVirtualAddress();
-		m_sphereIBView.Format = DXGI_FORMAT_R32_UINT;
-		m_sphereIBView.SizeInBytes = sphereIBSize;
+		m_sphereMesh.indexBufferView.BufferLocation = m_sphereMesh.indexBuffer->GetGPUVirtualAddress();
+		m_sphereMesh.indexBufferView.Format = DXGI_FORMAT_R32_UINT;
+		m_sphereMesh.indexBufferView.SizeInBytes = sphereIBSize;
 
-		m_sphereIndexCount = static_cast<UINT>(indices.size());
-		m_sphereVertexCount = static_cast<UINT>(vertices.size());
+		m_sphereMesh.indexCount = static_cast<UINT>(indices.size());
+
 	}
 
 
@@ -1709,3 +1776,91 @@ void D3D12HelloTriangle::UpdateInstancePropertiesBuffer() {
   }
   m_instanceProperties->Unmap(0, nullptr);
 }
+
+
+
+
+void D3D12HelloTriangle::loadOBJ()
+{
+	// Initialize Loader
+	objl::Loader Loader;
+
+	// Load .obj File
+	bool loadout = Loader.LoadFile("uploads_files_2787791_Mercedes+Benz+GLS+580.obj");
+
+	// Check to see if it loaded
+
+	// If so continue
+	if (loadout)
+	{
+		// Create/Open e1Out.txt
+		std::ofstream file("e1Out.txt");
+
+		// Go through each loaded mesh and out its contents
+		for (int i = 0; i < Loader.LoadedMeshes.size(); i++)
+		{
+			// Copy one of the loaded meshes to be our current mesh
+			objl::Mesh curMesh = Loader.LoadedMeshes[i];
+
+			// Print Mesh Name
+			file << "Mesh " << i << ": " << curMesh.MeshName << "\n";
+
+			// Print Vertices
+			file << "Vertices:\n";
+
+			// Go through each vertex and print its number,
+			//  position, normal, and texture coordinate
+			for (int j = 0; j < curMesh.Vertices.size(); j++)
+			{
+				file << "V" << j << ": " <<
+					"P(" << curMesh.Vertices[j].Position.X << ", " << curMesh.Vertices[j].Position.Y << ", " << curMesh.Vertices[j].Position.Z << ") " <<
+					"N(" << curMesh.Vertices[j].Normal.X << ", " << curMesh.Vertices[j].Normal.Y << ", " << curMesh.Vertices[j].Normal.Z << ") " <<
+					"TC(" << curMesh.Vertices[j].TextureCoordinate.X << ", " << curMesh.Vertices[j].TextureCoordinate.Y << ")\n";
+			}
+
+			// Print Indices
+			file << "Indices:\n";
+
+			// Go through every 3rd index and print the
+			//	triangle that these indices represent
+			for (int j = 0; j < curMesh.Indices.size(); j += 3)
+			{
+				file << "T" << j / 3 << ": " << curMesh.Indices[j] << ", " << curMesh.Indices[j + 1] << ", " << curMesh.Indices[j + 2] << "\n";
+			}
+
+			// Print Material
+			file << "Material: " << curMesh.MeshMaterial.name << "\n";
+			file << "Ambient Color: " << curMesh.MeshMaterial.Ka.X << ", " << curMesh.MeshMaterial.Ka.Y << ", " << curMesh.MeshMaterial.Ka.Z << "\n";
+			file << "Diffuse Color: " << curMesh.MeshMaterial.Kd.X << ", " << curMesh.MeshMaterial.Kd.Y << ", " << curMesh.MeshMaterial.Kd.Z << "\n";
+			file << "Specular Color: " << curMesh.MeshMaterial.Ks.X << ", " << curMesh.MeshMaterial.Ks.Y << ", " << curMesh.MeshMaterial.Ks.Z << "\n";
+			file << "Specular Exponent: " << curMesh.MeshMaterial.Ns << "\n";
+			file << "Optical Density: " << curMesh.MeshMaterial.Ni << "\n";
+			file << "Dissolve: " << curMesh.MeshMaterial.d << "\n";
+			file << "Illumination: " << curMesh.MeshMaterial.illum << "\n";
+			file << "Ambient Texture Map: " << curMesh.MeshMaterial.map_Ka << "\n";
+			file << "Diffuse Texture Map: " << curMesh.MeshMaterial.map_Kd << "\n";
+			file << "Specular Texture Map: " << curMesh.MeshMaterial.map_Ks << "\n";
+			file << "Alpha Texture Map: " << curMesh.MeshMaterial.map_d << "\n";
+			file << "Bump Map: " << curMesh.MeshMaterial.map_bump << "\n";
+
+			// Leave a space to separate from the next mesh
+			file << "\n";
+		}
+
+		// Close File
+		file.close();
+	}
+	// If not output an error
+	else
+	{
+		// Create/Open e1Out.txt
+		std::ofstream file("e1Out.txt");
+
+		// Output Error
+		file << "Failed to Load File. May have failed to find it or it was not an .obj file.\n";
+
+		// Close File
+		file.close();
+	}
+}
+

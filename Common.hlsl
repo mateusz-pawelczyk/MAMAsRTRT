@@ -5,10 +5,17 @@
 // D3D12_RAYTRACING_SHADER_CONFIG pipeline subobjet.
 struct HitInfo {
   float4 colorAndDistance;
+  int depth;
 };
 
 // Attributes output by the raytracing when hitting a surface,
 // here the barycentric coordinates
 struct Attributes {
   float2 bary;
+};
+
+
+struct SphereAttributes {
+	//float3 normal; // Surface normal at intersection
+	float2 uv;     // Texture coordinates
 };
