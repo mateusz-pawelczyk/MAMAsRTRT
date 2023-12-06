@@ -127,6 +127,9 @@ private:
   AccelerationStructureBuffers m_topLevelASBuffers;
   std::vector<std::pair<ComPtr<ID3D12Resource>, DirectX::XMMATRIX>> m_instances;
 
+  D3D12HelloTriangle::AccelerationStructureBuffers
+	  D3D12HelloTriangle::CreateBottomLevelASSphere(Sphere sphere);
+
   /// Create the acceleration structure of an instance
   ///
   /// \param     vVertexBuffers : pair of buffer and vertex count

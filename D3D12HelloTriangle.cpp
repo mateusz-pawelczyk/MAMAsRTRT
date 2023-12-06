@@ -8,6 +8,10 @@
 // PURPOSE, MERCHANTABILITY, OR NON-INFRINGEMENT.
 //
 //*********************************************************
+
+/// TODO: creating BLAS for sphere
+
+
 #include "stdafx.h"
 
 #include "D3D12HelloTriangle.h"
@@ -91,6 +95,7 @@ void D3D12HelloTriangle::OnInit() {
 // Load the rendering pipeline dependencies.
 void D3D12HelloTriangle::LoadPipeline() {
   UINT dxgiFactoryFlags = 0;
+
 
 #if defined(_DEBUG)
   // Enable the debug layer (requires the Graphics Tools "optional feature").
@@ -658,6 +663,7 @@ void D3D12HelloTriangle::OnKeyUp(UINT8 key) {
   }
 }
 
+
 //-----------------------------------------------------------------------------
 //
 // Create a bottom-level acceleration structure based on a list of vertex
@@ -900,18 +906,18 @@ ComPtr<ID3D12RootSignature> D3D12HelloTriangle::CreateHitSignature() {
 ComPtr<ID3D12RootSignature> D3D12HelloTriangle::CreateSphereHitGroupSignature() {
   nv_helpers_dx12::RootSignatureGenerator rsc;
 
-  rsc.AddRootParameter(D3D12_ROOT_PARAMETER_TYPE_SRV,
-	  0 /*t0*/); // spheres
+  //rsc.AddRootParameter(D3D12_ROOT_PARAMETER_TYPE_SRV,
+	 // 0 /*t0*/); // spheres
 
-  // Additional binding for the camera buffer, using a different register, like b1
-  rsc.AddRootParameter(D3D12_ROOT_PARAMETER_TYPE_CBV, 0 /*b0*/); // camera parameters
+  //// Additional binding for the camera buffer, using a different register, like b1
+  //rsc.AddRootParameter(D3D12_ROOT_PARAMETER_TYPE_CBV, 0 /*b0*/); // camera parameters
 
-  // #DXR Extra - Another ray type
-  // Add a single range pointing to the TLAS in the heap
-  rsc.AddHeapRangesParameter({
-	  {0 /*t1*/, 1, 1, D3D12_DESCRIPTOR_RANGE_TYPE_SRV,
-	   2 /*3rd slot of the heap*/},
-  });
+  //// #DXR Extra - Another ray type
+  //// Add a single range pointing to the TLAS in the heap
+  //rsc.AddHeapRangesParameter({
+	 // {0 /*t1*/, 1, 1, D3D12_DESCRIPTOR_RANGE_TYPE_SRV,
+	 //  2 /*3rd slot of the heap*/},
+  //});
   return rsc.Generate(m_device.Get(), true);
 }
 
@@ -996,7 +1002,7 @@ void D3D12HelloTriangle::CreateRaytracingPipeline() {
   // Hit group for all geometry when hit by a shadow ray
   pipeline.AddHitGroup(L"ShadowHitGroup", L"ShadowClosestHit");
 
-  pipeline.AddHitGroup(L"SphereHitGroup",  L"SphereClosestHit",  L"", L"SphereIntersection" );
+  pipeline.AddHitGroup(L"SphereHitGroup",  L"SphereClosestHit",  L"", L"SphereIntersection", D3D12_HIT_GROUP_TYPE_PROCEDURAL_PRIMITIVE);
 
   // The following section associates the root signature to each shader. Note
   // that we can explicitly show that some shaders share the same root signature
@@ -1011,7 +1017,7 @@ void D3D12HelloTriangle::CreateRaytracingPipeline() {
   pipeline.AddRootSignatureAssociation(m_shadowSignature.Get(),
                                        {L"ShadowHitGroup"});
 
-  //pipeline.AddRootSignatureAssociation(m_sphereHitGroupSignature.Get(), { L"SphereHitGroup" });
+  pipeline.AddRootSignatureAssociation(m_sphereHitGroupSignature.Get(), { L"SphereHitGroup" });
 
   // #DXR Extra - Another ray type
   pipeline.AddRootSignatureAssociation(m_missSignature.Get(),
@@ -1197,6 +1203,7 @@ void D3D12HelloTriangle::CreateShaderBindingTable() {
 	  // #DXR Extra - Another ray type
 	  m_sbtHelper.AddHitGroup(L"ShadowHitGroup", {});
   }
+
 
 
   // The plane also uses a constant buffer for its vertex colors

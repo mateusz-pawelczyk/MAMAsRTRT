@@ -9,12 +9,11 @@ struct Sphere {
 
 //StructuredBuffer<Sphere> g_Spheres : register(t0);
 
-[shader("intersection")]
-void SphereIntersection()
+[shader("intersection")] void SphereIntersection()
 {
 	Attributes attr;
 	attr.bary = float2(0.0f, 0.0f);
-	ReportHit(0.0f, 0, attr);
+	ReportHit(4.0f, 0, attr);
 
 	//// Retrieve instance index
 	//uint instanceIndex = PrimitiveIndex();
