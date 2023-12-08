@@ -13,7 +13,3 @@
 
 }
 
-[shader("intersection")] void SphereIntersection()
-{
-	
-}

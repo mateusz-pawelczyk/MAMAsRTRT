@@ -26,6 +26,7 @@
 #include "glm/gtc/type_ptr.hpp"
 #include "manipulator.h"
 
+#include "BLASBuilder.h"
 #include "OBJ_Loader.h"
 
 D3D12HelloTriangle::D3D12HelloTriangle(UINT width, UINT height,
@@ -45,7 +46,7 @@ void D3D12HelloTriangle::OnInit() {
   LoadPipeline();
   LoadAssets();
 
-  // Check the raytracing capabilities of the device
+  // Check the raytracing capabilities of the m_device
   CheckRaytracingSupport();
 
   // Setup the acceleration structures (AS) for raytracing. When setting up
@@ -99,8 +100,8 @@ void D3D12HelloTriangle::LoadPipeline() {
 
 #if defined(_DEBUG)
   // Enable the debug layer (requires the Graphics Tools "optional feature").
-  // NOTE: Enabling the debug layer after device creation will invalidate the
-  // active device.
+  // NOTE: Enabling the debug layer after m_device creation will invalidate the
+  // active m_device.
   {
     ComPtr<ID3D12Debug> debugController;
     if (SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(&debugController)))) {
@@ -808,12 +809,21 @@ void D3D12HelloTriangle::CreateAccelerationStructures() {
                           {{m_mengerIB.Get(), m_mengerIndexCount}});
 
   AccelerationStructureBuffers sphereBottomLevelBuffers =
-	  CreateBottomLevelAS({ {m_sphereMesh.vertexBuffer.Get(), m_sphereMesh.vertexCount} },
-		  { {m_sphereMesh.indexBuffer.Get(), m_sphereMesh.indexCount} });
+	  CreateBottomLevelAS({ {m_sphereMesh->vertexBuffer.Get(), m_sphereMesh->vertexCount} },
+		  { {m_sphereMesh->indexBuffer.Get(), m_sphereMesh->indexCount} });
 
   // #DXR Extra: Per-Instance Data
   AccelerationStructureBuffers planeBottomLevelBuffers =
       CreateBottomLevelAS({{m_planeBuffer.Get(), 6}});
+
+  ProceduralGeometry proceduralSphere(-0.0f, -0.0f, -0.0f, 1.0f, 1.0f, 1.0f, m_device);
+
+
+  BLASBuilder blasBuilder(m_device);
+  //blasBuilder.AddGeometry(m_sphereMesh);
+  blasBuilder.AddGeometry(&proceduralSphere);
+  std::vector<ComPtr<ID3D12Resource>> resultBuffers = blasBuilder.BuildBLAS(m_commandList);
+
 
   // Just one instance for now
   // #DXR Extra: Per-Instance Data
@@ -821,8 +831,10 @@ void D3D12HelloTriangle::CreateAccelerationStructures() {
   // 3 instances of the triangle + a plane
   m_instances = {
 	  {mengerBottomLevelBuffers.pResult, XMMatrixTranslation(3.f, 3.0f, 0)},
-	  {sphereBottomLevelBuffers.pResult, XMMatrixIdentity()},
-	  {sphereBottomLevelBuffers.pResult, XMMatrixTranslation(0.6f, 0.01f, 0)},
+	  {resultBuffers[0], XMMatrixIdentity()},
+	  //{resultBuffers[0], XMMatrixTranslation(0.6f, 0.01f, 0)},
+	  {sphereBottomLevelBuffers.pResult,  XMMatrixTranslation(0.6f, 0.01f, 0)},
+	  //{sphereBottomLevelBuffers.pResult, XMMatrixTranslation(0.6f, 0.01f, 0)},
 
 	  //{bottomLevelBuffers.pResult, XMMatrixTranslation(.6f, 0, 0)},
 	  //{bottomLevelBuffers.pResult, XMMatrixTranslation(-.6f, 0, 0)},
@@ -1168,7 +1180,7 @@ void D3D12HelloTriangle::CreateShaderBindingTable() {
   // #DXR Extra: Per-Instance Data
   // We have 3 triangles, each of which needs to access its own constant buffer
   // as a root parameter in its primary hit shader. The shadow hit only sets a
-  // boolean visibility in the payload, and does not require external data
+  // boolean m_visibility in the payload, and does not require external data
   //for (int i = 0; i < 3; ++i)
   {
     m_sbtHelper.AddHitGroup(
@@ -1182,13 +1194,20 @@ void D3D12HelloTriangle::CreateShaderBindingTable() {
     m_sbtHelper.AddHitGroup(L"ShadowHitGroup", {});
   }
 
+  //{
+	 // m_sbtHelper.AddHitGroup(
+		//  L"HitGroup",
+		//  { (void*)(m_sphereMesh->vertexBuffer->GetGPUVirtualAddress()),
+		//   (void*)(m_sphereMesh->indexBuffer->GetGPUVirtualAddress()),
+		//   (void*)(m_perInstanceConstantBuffers[0]->GetGPUVirtualAddress()),
+		// (void*)(m_cameraBuffer->GetGPUVirtualAddress()) });
+	 // // #DXR Extra - Another ray type
+	 // m_sbtHelper.AddHitGroup(L"ShadowHitGroup", {});
+  //}
   {
 	  m_sbtHelper.AddHitGroup(
-		  L"HitGroup",
-		  { (void*)(m_sphereMesh.vertexBuffer->GetGPUVirtualAddress()),
-		   (void*)(m_sphereMesh.indexBuffer->GetGPUVirtualAddress()),
-		   (void*)(m_perInstanceConstantBuffers[0]->GetGPUVirtualAddress()),
-		 (void*)(m_cameraBuffer->GetGPUVirtualAddress()) });
+		  L"SphereHitGroup",
+		  {  });
 	  // #DXR Extra - Another ray type
 	  m_sbtHelper.AddHitGroup(L"ShadowHitGroup", {});
   }
@@ -1196,8 +1215,8 @@ void D3D12HelloTriangle::CreateShaderBindingTable() {
   {
 	  m_sbtHelper.AddHitGroup(
 		  L"HitGroup",
-		  { (void*)(m_sphereMesh.vertexBuffer->GetGPUVirtualAddress()),
-		  (void*)(m_sphereMesh.indexBuffer->GetGPUVirtualAddress()),
+		  { (void*)(m_sphereMesh->vertexBuffer->GetGPUVirtualAddress()),
+		  (void*)(m_sphereMesh->indexBuffer->GetGPUVirtualAddress()),
 		   (void*)(m_perInstanceConstantBuffers[0]->GetGPUVirtualAddress()),
 		 (void*)(m_cameraBuffer->GetGPUVirtualAddress()) });
 	  // #DXR Extra - Another ray type
@@ -1683,74 +1702,74 @@ void D3D12HelloTriangle::CreateSphere(float const radius, unsigned int const lon
 
 
 	{
-		const UINT sphereVBSize =
-			static_cast<UINT>(vertices.size()) * sizeof(Vertex);
+		//const UINT sphereVBSize =
+		//	static_cast<UINT>(vertices.size()) * sizeof(Vertex);
 
-		// Note: using upload heaps to transfer static data like vert buffers is not
-		// recommended. Every time the GPU needs it, the upload heap will be
-		// marshalled over. Please read up on Default Heap usage. An upload heap is
-		// used here for code simplicity and because there are very few verts to
-		// actually transfer.
-		CD3DX12_HEAP_PROPERTIES heapProperty =
-			CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
-		CD3DX12_RESOURCE_DESC bufferResource =
-			CD3DX12_RESOURCE_DESC::Buffer(sphereVBSize);
-		ThrowIfFailed(m_device->CreateCommittedResource(
-			&heapProperty, D3D12_HEAP_FLAG_NONE, &bufferResource, //
-			D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, IID_PPV_ARGS(&m_sphereMesh.vertexBuffer)));
-		// Copy the triangle data to the vertex buffer.
-		UINT8* pVertexDataBegin;
-		CD3DX12_RANGE readRange(
-			0, 0); // We do not intend to read from this resource on the CPU.
-		ThrowIfFailed(m_sphereMesh.vertexBuffer->Map(
-			0, &readRange, reinterpret_cast<void**>(&pVertexDataBegin)));
-		memcpy(pVertexDataBegin, vertices.data(), sphereVBSize);
-		m_sphereMesh.vertexBuffer->Unmap(0, nullptr);
+		//// Note: using upload heaps to transfer static data like vert buffers is not
+		//// recommended. Every time the GPU needs it, the upload heap will be
+		//// marshalled over. Please read up on Default Heap usage. An upload heap is
+		//// used here for code simplicity and because there are very few verts to
+		//// actually transfer.
+		//CD3DX12_HEAP_PROPERTIES heapProperty =
+		//	CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
+		//CD3DX12_RESOURCE_DESC bufferResource =
+		//	CD3DX12_RESOURCE_DESC::Buffer(sphereVBSize);
+		//ThrowIfFailed(m_device->CreateCommittedResource(
+		//	&heapProperty, D3D12_HEAP_FLAG_NONE, &bufferResource, //
+		//	D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, IID_PPV_ARGS(&m_sphereMesh.vertexBuffer)));
+		//// Copy the triangle data to the vertex buffer.
+		//UINT8* pVertexDataBegin;
+		//CD3DX12_RANGE readRange(
+		//	0, 0); // We do not intend to read from this resource on the CPU.
+		//ThrowIfFailed(m_sphereMesh.vertexBuffer->Map(
+		//	0, &readRange, reinterpret_cast<void**>(&pVertexDataBegin)));
+		//memcpy(pVertexDataBegin, vertices.data(), sphereVBSize);
+		//m_sphereMesh.vertexBuffer->Unmap(0, nullptr);
+		//
+		//// Initialize the vertex buffer view.
+		//m_sphereMesh.vertexBufferView.BufferLocation = m_sphereMesh.vertexBuffer->GetGPUVirtualAddress();
+		//m_sphereMesh.vertexBufferView.StrideInBytes = sizeof(Vertex);
+		//m_sphereMesh.vertexBufferView.SizeInBytes = sphereVBSize;
+
+		//m_sphereMesh.vertexCount = static_cast<UINT>(vertices.size());
+
 		
-		// Initialize the vertex buffer view.
-		m_sphereMesh.vertexBufferView.BufferLocation = m_sphereMesh.vertexBuffer->GetGPUVirtualAddress();
-		m_sphereMesh.vertexBufferView.StrideInBytes = sizeof(Vertex);
-		m_sphereMesh.vertexBufferView.SizeInBytes = sphereVBSize;
-
-		m_sphereMesh.vertexCount = static_cast<UINT>(vertices.size());
-
-
 	}
 	{
-		const UINT sphereIBSize = static_cast<UINT>(indices.size()) * sizeof(UINT);
+		//const UINT sphereIBSize = static_cast<UINT>(indices.size()) * sizeof(UINT);
 
-		// Note: using upload heaps to transfer static data like vert buffers is not
-		// recommended. Every time the GPU needs it, the upload heap will be
-		// marshalled over. Please read up on Default Heap usage. An upload heap is
-		// used here for code simplicity and because there are very few verts to
-		// actually transfer.
-		CD3DX12_HEAP_PROPERTIES heapProperty =
-			CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
-		CD3DX12_RESOURCE_DESC bufferResource =
-			CD3DX12_RESOURCE_DESC::Buffer(sphereIBSize);
-		ThrowIfFailed(m_device->CreateCommittedResource(
-			&heapProperty, D3D12_HEAP_FLAG_NONE, &bufferResource, //
-			D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, IID_PPV_ARGS(&m_sphereMesh.indexBuffer)));
+		//// Note: using upload heaps to transfer static data like vert buffers is not
+		//// recommended. Every time the GPU needs it, the upload heap will be
+		//// marshalled over. Please read up on Default Heap usage. An upload heap is
+		//// used here for code simplicity and because there are very few verts to
+		//// actually transfer.
+		//CD3DX12_HEAP_PROPERTIES heapProperty =
+		//	CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
+		//CD3DX12_RESOURCE_DESC bufferResource =
+		//	CD3DX12_RESOURCE_DESC::Buffer(sphereIBSize);
+		//ThrowIfFailed(m_device->CreateCommittedResource(
+		//	&heapProperty, D3D12_HEAP_FLAG_NONE, &bufferResource, //
+		//	D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, IID_PPV_ARGS(&m_sphereMesh.indexBuffer)));
 
-		// Copy the triangle data to the index buffer.
-		UINT8* pIndexDataBegin;
-		CD3DX12_RANGE readRange(
-			0, 0); // We do not intend to read from this resource on the CPU.
-		ThrowIfFailed(m_sphereMesh.indexBuffer->Map(0, &readRange,
-			reinterpret_cast<void**>(&pIndexDataBegin)));
-		memcpy(pIndexDataBegin, indices.data(), sphereIBSize);
-		m_sphereMesh.indexBuffer->Unmap(0, nullptr);
+		//// Copy the triangle data to the index buffer.
+		//UINT8* pIndexDataBegin;
+		//CD3DX12_RANGE readRange(
+		//	0, 0); // We do not intend to read from this resource on the CPU.
+		//ThrowIfFailed(m_sphereMesh.indexBuffer->Map(0, &readRange,
+		//	reinterpret_cast<void**>(&pIndexDataBegin)));
+		//memcpy(pIndexDataBegin, indices.data(), sphereIBSize);
+		//m_sphereMesh.indexBuffer->Unmap(0, nullptr);
 
-		// Initialize the index buffer view.
-		m_sphereMesh.indexBufferView.BufferLocation = m_sphereMesh.indexBuffer->GetGPUVirtualAddress();
-		m_sphereMesh.indexBufferView.Format = DXGI_FORMAT_R32_UINT;
-		m_sphereMesh.indexBufferView.SizeInBytes = sphereIBSize;
+		//// Initialize the index buffer view.
+		//m_sphereMesh.indexBufferView.BufferLocation = m_sphereMesh.indexBuffer->GetGPUVirtualAddress();
+		//m_sphereMesh.indexBufferView.Format = DXGI_FORMAT_R32_UINT;
+		//m_sphereMesh.indexBufferView.SizeInBytes = sphereIBSize;
 
-		m_sphereMesh.indexCount = static_cast<UINT>(indices.size());
+		//m_sphereMesh.indexCount = static_cast<UINT>(indices.size());
 
 	}
-
-
+	m_sphereMesh = new Mesh(vertices, indices, m_device);
+	
 }
 
 

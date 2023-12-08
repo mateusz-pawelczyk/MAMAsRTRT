@@ -75,8 +75,8 @@ namespace nv_helpers_dx12
 class RayTracingPipelineGenerator
 {
 public:
-  /// The pipeline helper requires access to the device, as well as the
-  /// raytracing device prior to Windows 10 RS5.
+  /// The pipeline helper requires access to the m_device, as well as the
+  /// raytracing m_device prior to Windows 10 RS5.
   RayTracingPipelineGenerator(ID3D12Device5* device);
 
   /// Add a DXIL library to the pipeline. Note that this library has to be

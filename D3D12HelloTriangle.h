@@ -19,6 +19,9 @@
 #include "nv_helpers_dx12/ShaderBindingTableGenerator.h"
 #include "nv_helpers_dx12/TopLevelASGenerator.h"
 
+#include "Mesh.h"
+#include "ProceduralGeometry.h"
+#include "ObjectStructs.h"
 
 using namespace DirectX;
 
@@ -41,30 +44,30 @@ public:
 private:
   static const UINT FrameCount = 2;
   void loadOBJ();
-  struct Vertex {
-	  DirectX::XMFLOAT3 position; // 3D position
-	  DirectX::XMFLOAT4 color;    // RGBA color
-	  DirectX::XMFLOAT3 normal;   // Normal vector
-	  DirectX::XMFLOAT2 texcoord; // Texture coordinates
-	  DirectX::XMFLOAT3 tangent;  // Tangent vector
-	  DirectX::XMFLOAT3 binormal; // Binormal vector
-	  Vertex() : color({ 1.0, 0.5, 0.7, 1.0 }) {}
-    // #DXR Extra: Indexed Geometry
-    Vertex(XMFLOAT4 pos, XMFLOAT4 /*n*/, XMFLOAT4 col)
-        : position(pos.x, pos.y, pos.z), color(col) {}
-    Vertex(XMFLOAT3 pos, XMFLOAT4 col) : position(pos), color(col) {}
-	Vertex(XMFLOAT3 pos, XMFLOAT4 col, XMFLOAT3 normal, XMFLOAT2 texcoord, XMFLOAT3 tangent, XMFLOAT3 binormal) : position(pos), color(col), normal(normal), texcoord(texcoord), tangent(tangent), binormal(binormal) {}
-  };
+ // struct Vertex {
+	//  DirectX::XMFLOAT3 position; // 3D position
+	//  DirectX::XMFLOAT4 color;    // RGBA color
+	//  DirectX::XMFLOAT3 normal;   // Normal vector
+	//  DirectX::XMFLOAT2 texcoord; // Texture coordinates
+	//  DirectX::XMFLOAT3 tangent;  // Tangent vector
+	//  DirectX::XMFLOAT3 binormal; // Binormal vector
+	//  Vertex() : color({ 1.0, 0.5, 0.7, 1.0 }) {}
+ //   // #DXR Extra: Indexed Geometry
+ //   Vertex(XMFLOAT4 pos, XMFLOAT4 /*n*/, XMFLOAT4 col)
+ //       : position(pos.x, pos.y, pos.z), color(col) {}
+ //   Vertex(XMFLOAT3 pos, XMFLOAT4 col) : position(pos), color(col) {}
+	//Vertex(XMFLOAT3 pos, XMFLOAT4 col, XMFLOAT3 normal, XMFLOAT2 texcoord, XMFLOAT3 tangent, XMFLOAT3 binormal) : position(pos), color(col), normal(normal), texcoord(texcoord), tangent(tangent), binormal(binormal) {}
+ // };
 
-  struct Mesh {
-	  ComPtr<ID3D12Resource> vertexBuffer;
-	  ComPtr<ID3D12Resource> indexBuffer;
-	  D3D12_VERTEX_BUFFER_VIEW vertexBufferView;
-	  D3D12_INDEX_BUFFER_VIEW indexBufferView;
+  //struct Mesh {
+	 // ComPtr<ID3D12Resource> vertexBuffer;
+	 // ComPtr<ID3D12Resource> indexBuffer;
+	 // D3D12_VERTEX_BUFFER_VIEW vertexBufferView;
+	 // D3D12_INDEX_BUFFER_VIEW indexBufferView;
 
-	  UINT indexCount;
-	  UINT vertexCount;
-  };
+	 // UINT indexCount;
+	 // UINT vertexCount;
+  //};
 
   struct ParametricShapeData {
 	  XMFLOAT3 vertex;
@@ -232,7 +235,8 @@ private:
   UINT m_mengerIndexCount;
   UINT m_mengerVertexCount;
 
-  Mesh m_sphereMesh;
+  Mesh* m_sphereMesh;
+
 
 
 

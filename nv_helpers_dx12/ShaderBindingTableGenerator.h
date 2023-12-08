@@ -194,7 +194,7 @@ private:
   uint32_t m_hitGroupEntrySize;
 
   /// The program names are translated into program identifiers.The size in bytes of an identifier
-  /// is provided by the device and is the same for all categories.
+  /// is provided by the m_device and is the same for all categories.
   UINT m_progIdSize;
 };
 } // namespace nv_helpers_dx12

@@ -141,7 +141,7 @@ void RootSignatureGenerator::AddRootParameter(D3D12_ROOT_PARAMETER_TYPE type,
     param.Descriptor.ShaderRegister = shaderRegister;
   }
 
-  // We default the visibility to all shaders
+  // We default the m_visibility to all shaders
   param.ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
 
   // Add the root parameter to the set of parameters,
