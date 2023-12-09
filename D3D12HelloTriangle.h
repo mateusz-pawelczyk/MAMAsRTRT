@@ -12,15 +12,18 @@
 #pragma once
 
 #include "DXSample.h"
-
+#include <wincodec.h>  // For WIC
+#include <wrl.h>       // For Microsoft::WRL::ComPtr
 #include <dxcapi.h>
 #include <vector>
+#include <chrono>
 
 #include "nv_helpers_dx12/ShaderBindingTableGenerator.h"
 #include "nv_helpers_dx12/TopLevelASGenerator.h"
 
 #include "Mesh.h"
 #include "ProceduralGeometry.h"
+#include "Sphere.h"
 #include "ObjectStructs.h"
 
 using namespace DirectX;
@@ -78,10 +81,15 @@ private:
 	  XMFLOAT4 color;
   };
 
-  struct Sphere {
-	  XMFLOAT3 center;
-	  float    radius;
+  struct SceneConstantBuffer {
+	  XMFLOAT4  lightPosition;
+	  XMFLOAT4  lightAmbientColor;
+	  XMFLOAT4	 lightDiffuseColor;
+	  float    elapsedTime;
   };
+
+  std::chrono::high_resolution_clock::time_point startTime;
+
 
   // Pipeline objects.
   CD3DX12_VIEWPORT m_viewport;
@@ -198,6 +206,17 @@ private:
   ComPtr<ID3D12DescriptorHeap> m_constHeap;
   uint32_t m_cameraBufferSize = 0;
 
+  void CreateSceneConstantBuffer();
+  void UpdateSceneConstantBuffer();
+  SceneConstantBuffer m_scene;
+  ComPtr<ID3D12Resource> m_SceneConstantBuffer;
+  uint32_t m_SceneConstantBufferSize = 0;
+
+  Microsoft::WRL::ComPtr<ID3D12Resource> texture;
+
+ 
+
+
   // #DXR Extra: Perspective Camera++
   void OnButtonDown(UINT32 lParam);
   void OnMouseMove(UINT8 wParam, UINT32 lParam);
@@ -236,6 +255,8 @@ private:
   UINT m_mengerVertexCount;
 
   Mesh* m_sphereMesh;
+
+  Sphere* m_sphere;
 
 
 

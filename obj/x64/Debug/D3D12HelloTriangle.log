@@ -1,11 +1,7 @@
 ﻿  D3D12HelloTriangle.cpp
 C:\Users\ma2880pa-s\Program\MAMAsRTRT\ObjectStructs.h(12): warning C4305: 'argument': truncation from 'double' to 'float'
+C:\Users\ma2880pa-s\Program\MAMAsRTRT\BaseObjectClass.h(39): warning C4267: 'return': conversion from 'size_t' to 'UINT', possible loss of data
 C:\Users\ma2880pa-s\Program\MAMAsRTRT\OBJ_Loader.h(949): warning C4244: 'initializing': conversion from 'double' to 'float', possible loss of data
-  Main.cpp
-C:\Users\ma2880pa-s\Program\MAMAsRTRT\ObjectStructs.h(12): warning C4305: 'argument': truncation from 'double' to 'float'
-  Mesh.cpp
-C:\Users\ma2880pa-s\Program\MAMAsRTRT\ObjectStructs.h(12): warning C4305: 'argument': truncation from 'double' to 'float'
-  Generating Code...
   D3D12HelloTriangle.vcxproj -> C:\Users\ma2880pa-s\Program\MAMAsRTRT\bin\x64\Debug\D3D12HelloTriangle.exe
   Copy dxcompiler.dll and dxil.dll to target folder
   
@@ -13,7 +9,7 @@ C:\Users\ma2880pa-s\Program\MAMAsRTRT\ObjectStructs.h(12): warning C4305: 'argum
      ROBOCOPY     ::     Robust File Copy for Windows                              
   -------------------------------------------------------------------------------
   
-    Started : den 8 december 2023 19:43:52
+    Started : den 9 december 2023 20:04:52
      Source : C:\Program Files (x86)\Windows Kits\10\bin\10.0.17763.0\x64\
        Dest : C:\Users\ma2880pa-s\Program\MAMAsRTRT\bin\x64\Debug\
   
@@ -33,5 +29,5 @@ C:\Users\ma2880pa-s\Program\MAMAsRTRT\ObjectStructs.h(12): warning C4305: 'argum
      Files :         2         0         2         0         0         0
      Bytes :   12.85 m         0   12.85 m         0         0         0
      Times :   0:00:00   0:00:00                       0:00:00   0:00:00
-     Ended : den 8 december 2023 19:43:52
+     Ended : den 9 december 2023 20:04:52
   

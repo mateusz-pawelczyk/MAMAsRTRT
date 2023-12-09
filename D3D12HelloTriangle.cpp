@@ -12,6 +12,7 @@
 /// TODO: creating BLAS for sphere
 
 
+
 #include "stdafx.h"
 
 #include "D3D12HelloTriangle.h"
@@ -42,6 +43,8 @@ void D3D12HelloTriangle::OnInit() {
   nv_helpers_dx12::CameraManip.setWindowSize(GetWidth(), GetHeight());
   nv_helpers_dx12::CameraManip.setLookat(
       glm::vec3(1.5f, 1.5f, 1.5f), glm::vec3(0, 0, 0), glm::vec3(0, 1, 0));
+  startTime = std::chrono::high_resolution_clock::now();
+
 
   LoadPipeline();
   LoadAssets();
@@ -52,6 +55,9 @@ void D3D12HelloTriangle::OnInit() {
   // Setup the acceleration structures (AS) for raytracing. When setting up
   // geometry, each bottom-level AS has its own transform matrix.
   CreateAccelerationStructures();
+
+  m_sphere->createInstanceBuffers();
+  
 
   // Command lists are created in the recording state, but there is
   // nothing to record yet. The main loop expects it to be closed, so
@@ -81,6 +87,8 @@ void D3D12HelloTriangle::OnInit() {
   // #DXR Extra: Perspective Camera
   // Create a buffer to store the modelview and perspective camera matrices
   CreateCameraBuffer();
+
+  CreateSceneConstantBuffer();
 
   // Create the buffer containing the raytracing result (always output in a
   // UAV), and create the heap referencing the resources used by the raytracing,
@@ -408,9 +416,18 @@ void D3D12HelloTriangle::LoadAssets() {
 
 // Update frame-based values.
 void D3D12HelloTriangle::OnUpdate() {
+	auto currentTime = std::chrono::high_resolution_clock::now();
+	float elapsedTime = std::chrono::duration<float, std::chrono::seconds::period>(
+		currentTime - startTime).count();
+
+	// Update the SceneConstantBuffer
+	m_scene.elapsedTime = elapsedTime;
+
+	m_scene.lightPosition = XMFLOAT4(1.0f, 1.0f, 0.0f, 1.0f);
   // #DXR Extra: Perspective Camera
   UpdateCameraBuffer();
-
+  UpdateSceneConstantBuffer();
+  m_sphere->updateInstanceBuffers();
   // #DXR Extra - Refitting
   // Increment the time counter at each frame, and update the corresponding
   // instance matrix of the first triangle to animate its position
@@ -816,14 +833,17 @@ void D3D12HelloTriangle::CreateAccelerationStructures() {
   AccelerationStructureBuffers planeBottomLevelBuffers =
       CreateBottomLevelAS({{m_planeBuffer.Get(), 6}});
 
-  ProceduralGeometry proceduralSphere(-0.0f, -0.0f, -0.0f, 1.0f, 1.0f, 1.0f, m_device);
+  //ProceduralGeometry proceduralSphere(-0.0f, -0.0f, -0.0f, 1.0f, 1.0f, 1.0f, m_device);
+  m_sphere = new Sphere( 0.4f, m_device);
 
 
   BLASBuilder blasBuilder(m_device);
   //blasBuilder.AddGeometry(m_sphereMesh);
-  blasBuilder.AddGeometry(&proceduralSphere);
+  blasBuilder.AddGeometry(m_sphere);
   std::vector<ComPtr<ID3D12Resource>> resultBuffers = blasBuilder.BuildBLAS(m_commandList);
 
+  m_sphere->addInstance(XMMatrixTranslation(2.0f, 2.0f, -2.0f));
+  m_sphere->addInstance();
 
   // Just one instance for now
   // #DXR Extra: Per-Instance Data
@@ -831,7 +851,8 @@ void D3D12HelloTriangle::CreateAccelerationStructures() {
   // 3 instances of the triangle + a plane
   m_instances = {
 	  {mengerBottomLevelBuffers.pResult, XMMatrixTranslation(3.f, 3.0f, 0)},
-	  {resultBuffers[0], XMMatrixIdentity()},
+	  {m_sphere->asBuffers.pResult,  m_sphere->getInstance(0).transform},
+	  {m_sphere->asBuffers.pResult,  m_sphere->getInstance(1).transform},
 	  //{resultBuffers[0], XMMatrixTranslation(0.6f, 0.01f, 0)},
 	  {sphereBottomLevelBuffers.pResult,  XMMatrixTranslation(0.6f, 0.01f, 0)},
 	  //{sphereBottomLevelBuffers.pResult, XMMatrixTranslation(0.6f, 0.01f, 0)},
@@ -921,15 +942,19 @@ ComPtr<ID3D12RootSignature> D3D12HelloTriangle::CreateSphereHitGroupSignature() 
   //rsc.AddRootParameter(D3D12_ROOT_PARAMETER_TYPE_SRV,
 	 // 0 /*t0*/); // spheres
 
-  //// Additional binding for the camera buffer, using a different register, like b1
-  //rsc.AddRootParameter(D3D12_ROOT_PARAMETER_TYPE_CBV, 0 /*b0*/); // camera parameters
+  // Additional binding for the camera buffer, using a different register, like b1
+  rsc.AddRootParameter(D3D12_ROOT_PARAMETER_TYPE_CBV, 0 /*b0*/); // transformation
 
-  //// #DXR Extra - Another ray type
-  //// Add a single range pointing to the TLAS in the heap
-  //rsc.AddHeapRangesParameter({
-	 // {0 /*t1*/, 1, 1, D3D12_DESCRIPTOR_RANGE_TYPE_SRV,
-	 //  2 /*3rd slot of the heap*/},
-  //});
+  // #DXR Extra - Another ray type
+  // Add a single range pointing to the TLAS in the heap
+  rsc.AddHeapRangesParameter({
+	  {0 /*t0*/, 1, 1, D3D12_DESCRIPTOR_RANGE_TYPE_SRV,
+	   1 /*2nd slot of the heap*/},
+	   {0 /*b0*/, 1, 1, D3D12_DESCRIPTOR_RANGE_TYPE_CBV /*Camera parameters*/,
+		2} ,
+	   {1 /*b1*/, 1, 1, D3D12_DESCRIPTOR_RANGE_TYPE_CBV /*scene parameters*/,
+		3}
+  });
   return rsc.Generate(m_device.Get(), true);
 }
 
@@ -1099,11 +1124,12 @@ void D3D12HelloTriangle::CreateRaytracingOutputBuffer() {
 // raytracing output and the top-level acceleration structure
 //
 void D3D12HelloTriangle::CreateShaderResourceHeap() {
-  // #DXR Extra: Perspective Camera
-  // Create a SRV/UAV/CBV descriptor heap. We need 3 entries - 1 SRV for the
-  // TLAS, 1 UAV for the raytracing output and 1 CBV for the camera matrices
-  m_srvUavHeap = nv_helpers_dx12::CreateDescriptorHeap(
-      m_device.Get(), 3, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, true);
+	// Create a SRV/UAV/CBV descriptor heap.
+	// We now need 4 entries - 1 SRV for the TLAS, 1 UAV for the raytracing output, 
+	// 1 CBV for the camera matrices, and 1 CBV for the SceneConstantBuffer
+	m_srvUavHeap = nv_helpers_dx12::CreateDescriptorHeap(
+		m_device.Get(), 4, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, true);
+
 
   // Get a handle to the heap memory on the CPU side, to be able to write the
   // descriptors directly
@@ -1141,6 +1167,17 @@ void D3D12HelloTriangle::CreateShaderResourceHeap() {
   cbvDesc.BufferLocation = m_cameraBuffer->GetGPUVirtualAddress();
   cbvDesc.SizeInBytes = m_cameraBufferSize;
   m_device->CreateConstantBufferView(&cbvDesc, srvHandle);
+
+  // Update the srvHandle to point to the next slot in the descriptor heap
+  srvHandle.ptr += m_device->GetDescriptorHandleIncrementSize(
+	  D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+
+  // Describe and create a constant buffer view for the SceneConstantBuffer
+  D3D12_CONSTANT_BUFFER_VIEW_DESC sceneCbvDesc = {};
+  sceneCbvDesc.BufferLocation = m_SceneConstantBuffer->GetGPUVirtualAddress();
+  sceneCbvDesc.SizeInBytes = m_SceneConstantBufferSize; // Size must be 256-byte aligned.
+  m_device->CreateConstantBufferView(&sceneCbvDesc, srvHandle);
+
 }
 
 //-----------------------------------------------------------------------------
@@ -1204,10 +1241,12 @@ void D3D12HelloTriangle::CreateShaderBindingTable() {
 	 // // #DXR Extra - Another ray type
 	 // m_sbtHelper.AddHitGroup(L"ShadowHitGroup", {});
   //}
+  for (UINT i = 0; i < m_sphere->getInstanceCount(); ++i)
   {
 	  m_sbtHelper.AddHitGroup(
 		  L"SphereHitGroup",
-		  {  });
+		  { (void*)(m_sphere->getInstanceBuffer(i)->GetGPUVirtualAddress())
+					  });
 	  // #DXR Extra - Another ray type
 	  m_sbtHelper.AddHitGroup(L"ShadowHitGroup", {});
   }
@@ -1341,6 +1380,30 @@ void D3D12HelloTriangle::UpdateCameraBuffer() {
   memcpy(pData, matrices.data(), m_cameraBufferSize);
   m_cameraBuffer->Unmap(0, nullptr);
 }
+
+void D3D12HelloTriangle::CreateSceneConstantBuffer() {
+	m_SceneConstantBufferSize = sizeof(SceneConstantBuffer);
+	m_SceneConstantBufferSize = (m_SceneConstantBufferSize + 255) & ~255; // Align to 256 bytes
+
+	m_SceneConstantBuffer = nv_helpers_dx12::CreateBuffer(
+		m_device.Get(), m_SceneConstantBufferSize, D3D12_RESOURCE_FLAG_NONE,
+		D3D12_RESOURCE_STATE_GENERIC_READ, nv_helpers_dx12::kUploadHeapProps);
+}
+
+void D3D12HelloTriangle::UpdateSceneConstantBuffer() {
+	uint8_t* pData = nullptr;
+	ThrowIfFailed(m_SceneConstantBuffer->Map(0, nullptr, reinterpret_cast<void**>(&pData)));
+
+	if (pData) {
+		memcpy(pData, &m_scene, sizeof(SceneConstantBuffer)); // Copy actual data size
+		m_SceneConstantBuffer->Unmap(0, nullptr);
+	}
+	else {
+		throw std::runtime_error("Unable to map scene constant buffer.");
+	}
+}
+
+
 
 //--------------------------------------------------------------------------------------------------
 //
@@ -1681,7 +1744,7 @@ void D3D12HelloTriangle::CreateSphere(float const radius, unsigned int const lon
 	}
 
 	// create index array
-	auto indices = std::vector<UINT>(3 * 2 * latitude_slice_edges_count * longitude_slice_edges_count);
+	auto indices = std::vector<UINT>(3u * 2u * latitude_slice_edges_count * longitude_slice_edges_count);
 
 
 	// generate indices iteratively
