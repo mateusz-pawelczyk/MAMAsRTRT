@@ -20,6 +20,18 @@ cbuffer SceneConstantBuffer : register(b1, space1) {
 	float  elapsedTime;
 }
 
+struct Material {
+	float4 diffuseColor;
+	float4 specularColor;
+	float4 emissiveColor;
+	float specularPower;
+	float emissiveness;
+	float reflectivity;
+	float refractivity;
+	float refractionIndex;
+};
+
+StructuredBuffer<Material> g_Materials : register(t0);
 
 
 float3 GetCameraPositionFromViewMatrix(float4x4 inverseViewMatrix) {
@@ -126,8 +138,15 @@ float3 HitWorldPosition()
 		color = float3(1.f, 1.f, 0.f);
 	if (PrimitiveIndex() == 5)
 		color = float3(1.f, 1.f, 1.f);
-	
-		payload.colorAndDistance = float4(sin(elapsedTime), cos(elapsedTime), sin(elapsedTime), RayTCurrent());
+	if (g_Materials[0].specularColor.w >= 0.7)
+	{
+		payload.colorAndDistance = float4(g_Materials[1].diffuseColor.xyz, RayTCurrent());
+
+	}
+	else {
+		payload.colorAndDistance = float4(g_Materials[0].diffuseColor.xyz, RayTCurrent());
+
+	}
 
 	
 	//normalize(normalize(float3(0.0f, elapsedTime, 0.0f)) + normalize(float3(0.0f, 0.0f , 1 - elapsedTime)))

@@ -33,16 +33,16 @@ important as it will define the slots of the heap or of the Shader Binding Table
 pointers will be bound.
 
 Example to create an empty root signature:
-nv_helpers_dx12::RootSignatureGenerator rsc;
+nv_helpers_dx12::RootSignatureGenerator2 rsc;
 return rsc.Generate(m_device.Get(), true);
 
 Example to create a signature with one constant buffer:
-nv_helpers_dx12::RootSignatureGenerator rsc;
+nv_helpers_dx12::RootSignatureGenerator2 rsc;
 rsc.AddRootParameter(D3D12_ROOT_PARAMETER_TYPE_CBV);
 return rsc.Generate(m_device.Get(), true);
 
 More advance root signature:
-nv_helpers_dx12::RootSignatureGenerator rsc;
+nv_helpers_dx12::RootSignatureGenerator2 rsc;
 rsc.AddRangeParameter({{0,1,0, D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 0},
 {0,1,0, D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1},
 {0,1,0, D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 2}});

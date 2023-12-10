@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "ProceduralGeometry.h"
+
 #include <stdexcept>
 
 inline void ThrowIfFailed(HRESULT hr)
@@ -119,4 +120,30 @@ void ProceduralGeometry::updateInstanceBuffers()
 			throw std::runtime_error("Unable to map instance constant buffer.");
 		}
 	}
+}
+
+
+ComPtr<ID3D12RootSignature> ProceduralGeometry::CreateHitGroupSignature()
+{
+	RootSignatureBuilder rsc;
+
+	//rsc.AddRootParameter(D3D12_ROOT_PARAMETER_TYPE_SRV,
+	   // 0 /*t0*/); // spheres
+
+	// Additional binding for the camera buffer, using a different register, like b1
+	rsc.AddRootParameter(D3D12_ROOT_PARAMETER_TYPE_CBV, 0 /*b0*/); // transformation
+
+	rsc.AddRootParameter(D3D12_ROOT_PARAMETER_TYPE_CBV, 0 /*b1*/); // geometry data (i.e. for spheres: radius)
+
+	// #DXR Extra - Another ray type
+	// Add a single range pointing to the TLAS in the heap
+	rsc.AddHeapRangesParameter({
+		{0 /*t0*/, 1, 1, D3D12_DESCRIPTOR_RANGE_TYPE_SRV,
+		 1 /*2nd slot of the heap*/},
+		 {0 /*b0*/, 1, 1, D3D12_DESCRIPTOR_RANGE_TYPE_CBV /*Camera parameters*/,
+		  2} ,
+		 {1 /*b1*/, 1, 1, D3D12_DESCRIPTOR_RANGE_TYPE_CBV /*scene parameters*/,
+		  3}
+		});
+	return rsc.Generate(m_device.Get(), true);
 }

@@ -2,6 +2,7 @@
 
 
 #include "BaseObjectClass.h"
+#include <vector>
 
 // ProceduralGeometry class inherits from BaseObjectClass
 class ProceduralGeometry : public BaseObjectClass {
@@ -19,6 +20,8 @@ protected:
 public:
 	void createInstanceBuffers();
 	void updateInstanceBuffers();
+
 	ComPtr<ID3D12Resource> getInstanceBuffer(UINT index) { return m_instanceBuffers[index]; }
+	ComPtr<ID3D12RootSignature> CreateHitGroupSignature() override;
 };
 

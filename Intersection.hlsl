@@ -32,19 +32,12 @@ float3 objectRaDirection()
 
 [shader("intersection")] void SphereIntersection()
 {
-	//Attributes attr;
-	//attr.bary = float2(0.0f, 0.0f);
-	//ReportHit(4.0f, 0, attr);
+	SphereAttributes attr;
 
-	// Retrieve instance index
 	uint instanceIndex = PrimitiveIndex();
-
-	// Access sphere data using the instance index
-	Sphere sphere;// = g_Spheres[instanceIndex];
+	Sphere sphere;
 	sphere.center = float3(-0.5f, -0.5f, -0.5f);
 	sphere.radius = 0.4f;
-
-	SphereAttributes attr;
 
 	float3 oc = objectRayOrigin();
 	float a = dot(objectRaDirection(), objectRaDirection());
@@ -52,24 +45,21 @@ float3 objectRaDirection()
 	float c = dot(oc, oc) - sphere.radius * sphere.radius;
 	float discriminant = half_b * half_b - a * c;
 
-	
-	float t = (-half_b - sqrt(discriminant)) / a;
+	if (discriminant > 0) {
+		float sqrtd = sqrt(discriminant);
+		float t = (-half_b - sqrtd) / a; // Only considering the nearest intersection
 
-	
-	if (t >= 0)
-	{
-		float3 P = objectRayOrigin() + t * objectRaDirection();
+		if (t >= 0) {
+			float3 P = objectRayOrigin() + t * objectRaDirection();
+			float3 N = normalize(P - sphere.center); // Normal at the intersection
 
-		//float3 N = normalize(WorldRayOrigin() + t * WorldRayDirection() - sphere.center);
+			// Calculate UV coordinates
+			float u = atan2(N.z, N.x) / (2 * 3.14159265359f);
+			float v = (acos(N.y / sphere.radius) / 3.14159265359f);
+			attr.uv = float2(u, 1.0f - v); // Adjust V if necessary
 
-		//// Calculate UV coordinates
-		float U = 0.5 + atan2(P.z, P.x) / (2.0 * 3.14159265359);
-		float V = 0.5 - asin(P.y) / 3.14159265359;
-		//
-		////attr.normal = N;
-		attr.uv = float2(U, V);
-
-		ReportHit(t, 0, attr);
+			ReportHit(t, 0, attr);
+		}
 	}
 	
 	

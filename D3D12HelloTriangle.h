@@ -45,6 +45,7 @@ public:
   virtual void OnDestroy();
 
 private:
+
   static const UINT FrameCount = 2;
   void loadOBJ();
  // struct Vertex {

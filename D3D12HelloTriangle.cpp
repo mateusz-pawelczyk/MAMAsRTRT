@@ -38,6 +38,8 @@ D3D12HelloTriangle::D3D12HelloTriangle(UINT width, UINT height,
       m_scissorRect(0, 0, static_cast<LONG>(width), static_cast<LONG>(height)),
       m_rtvDescriptorSize(0) {}
 
+UINT BaseObjectClass::totalInstanceCount = 0;
+
 void D3D12HelloTriangle::OnInit() {
 
   nv_helpers_dx12::CameraManip.setWindowSize(GetWidth(), GetHeight());
@@ -57,7 +59,7 @@ void D3D12HelloTriangle::OnInit() {
   CreateAccelerationStructures();
 
   m_sphere->createInstanceBuffers();
-  
+  m_sphere->createMaterialBuffers();
 
   // Command lists are created in the recording state, but there is
   // nothing to record yet. The main loop expects it to be closed, so
@@ -428,6 +430,7 @@ void D3D12HelloTriangle::OnUpdate() {
   UpdateCameraBuffer();
   UpdateSceneConstantBuffer();
   m_sphere->updateInstanceBuffers();
+  m_sphere->updateMaterialBuffers();
   // #DXR Extra - Refitting
   // Increment the time counter at each frame, and update the corresponding
   // instance matrix of the first triangle to animate its position
@@ -832,6 +835,7 @@ void D3D12HelloTriangle::CreateAccelerationStructures() {
   // #DXR Extra: Per-Instance Data
   AccelerationStructureBuffers planeBottomLevelBuffers =
       CreateBottomLevelAS({{m_planeBuffer.Get(), 6}});
+  BaseObjectClass::totalInstanceCount = 0;
 
   //ProceduralGeometry proceduralSphere(-0.0f, -0.0f, -0.0f, 1.0f, 1.0f, 1.0f, m_device);
   m_sphere = new Sphere( 0.4f, m_device);
@@ -841,9 +845,29 @@ void D3D12HelloTriangle::CreateAccelerationStructures() {
   //blasBuilder.AddGeometry(m_sphereMesh);
   blasBuilder.AddGeometry(m_sphere);
   std::vector<ComPtr<ID3D12Resource>> resultBuffers = blasBuilder.BuildBLAS(m_commandList);
+  Material sphere1Mat;
+  sphere1Mat.emissiveness = 0.8;
+  sphere1Mat.diffuseColor = XMVECTOR{ 1.0f, 1.0f, 1.0f, 1.0f };
+  sphere1Mat.specularColor = XMVECTOR{ 1.0f, 1.0f, 1.0f, 1.0f };
+  sphere1Mat.emissiveColor = XMVECTOR{ 1.0f, 1.0f, 0.0f, 1.0f };
+  sphere1Mat.refractivity = 0.8;
+  sphere1Mat.refractionIndex = 0.8;
+  sphere1Mat.reflectivity = 0.8;
+  sphere1Mat.specularPower = 0.8;
 
-  m_sphere->addInstance(XMMatrixTranslation(2.0f, 2.0f, -2.0f));
-  m_sphere->addInstance();
+  Material sphere2Mat;
+  sphere2Mat.emissiveness = 0.8;
+  sphere2Mat.diffuseColor = XMVECTOR{ 1.0f, 1.0f, 1.0f, 1.0f };
+  sphere2Mat.specularColor = XMVECTOR{ 1.0f, 1.0f, 1.0f, 1.0f };
+  sphere2Mat.emissiveColor = XMVECTOR{ 1.0f, 1.0f, 0.0f, 1.0f };
+  sphere2Mat.refractivity = 0.8;
+  sphere2Mat.refractionIndex = 0.8;
+  sphere2Mat.reflectivity = 0.8;
+  sphere2Mat.specularPower = 0.8;
+
+
+  m_sphere->addInstance(XMMatrixTranslation(2.0f, 2.0f, -2.0f), sphere1Mat);
+  m_sphere->addInstance(sphere2Mat);
 
   // Just one instance for now
   // #DXR Extra: Per-Instance Data
@@ -953,7 +977,9 @@ ComPtr<ID3D12RootSignature> D3D12HelloTriangle::CreateSphereHitGroupSignature() 
 	   {0 /*b0*/, 1, 1, D3D12_DESCRIPTOR_RANGE_TYPE_CBV /*Camera parameters*/,
 		2} ,
 	   {1 /*b1*/, 1, 1, D3D12_DESCRIPTOR_RANGE_TYPE_CBV /*scene parameters*/,
-		3}
+		3},
+		{0 /*t1*/, 1, 0, D3D12_DESCRIPTOR_RANGE_TYPE_SRV /*material*/,
+		4}
   });
   return rsc.Generate(m_device.Get(), true);
 }
@@ -1128,7 +1154,7 @@ void D3D12HelloTriangle::CreateShaderResourceHeap() {
 	// We now need 4 entries - 1 SRV for the TLAS, 1 UAV for the raytracing output, 
 	// 1 CBV for the camera matrices, and 1 CBV for the SceneConstantBuffer
 	m_srvUavHeap = nv_helpers_dx12::CreateDescriptorHeap(
-		m_device.Get(), 4, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, true);
+		m_device.Get(), 5, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, true);
 
 
   // Get a handle to the heap memory on the CPU side, to be able to write the
@@ -1177,6 +1203,20 @@ void D3D12HelloTriangle::CreateShaderResourceHeap() {
   sceneCbvDesc.BufferLocation = m_SceneConstantBuffer->GetGPUVirtualAddress();
   sceneCbvDesc.SizeInBytes = m_SceneConstantBufferSize; // Size must be 256-byte aligned.
   m_device->CreateConstantBufferView(&sceneCbvDesc, srvHandle);
+
+
+  srvHandle.ptr += m_device->GetDescriptorHandleIncrementSize(
+	  D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+
+  D3D12_SHADER_RESOURCE_VIEW_DESC srvDescMaterial = {};
+  srvDescMaterial.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+  srvDescMaterial.Format = DXGI_FORMAT_UNKNOWN;
+  srvDescMaterial.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
+  srvDescMaterial.Buffer.NumElements = BaseObjectClass::totalInstanceCount;
+  srvDescMaterial.Buffer.StructureByteStride = sizeof(Material);
+  srvDescMaterial.Buffer.Flags = D3D12_BUFFER_SRV_FLAG_NONE;
+  m_device->CreateShaderResourceView(BaseObjectClass::m_materialBuffer.Get(), &srvDescMaterial, srvHandle); //CHANGE!!!!!!!!!!!!!!!!!
+
 
 }
 
@@ -1336,6 +1376,7 @@ void D3D12HelloTriangle::CreateCameraBuffer() {
   srvHandle.ptr += m_device->GetDescriptorHandleIncrementSize(
       D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 
+  // Material Stuctured Buffer
   D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc;
   srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
   srvDesc.Format = DXGI_FORMAT_UNKNOWN;
