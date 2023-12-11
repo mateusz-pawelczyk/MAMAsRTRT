@@ -19,7 +19,7 @@ C:\Users\ma2880pa-s\Program\MAMAsRTRT\D3D12HelloTriangle.cpp(866): warning C4305
      ROBOCOPY     ::     Robust File Copy for Windows                              
   -------------------------------------------------------------------------------
   
-    Started : den 10 december 2023 19:58:57
+    Started : den 11 december 2023 11:06:13
      Source : C:\Program Files (x86)\Windows Kits\10\bin\10.0.17763.0\x64\
        Dest : C:\Users\ma2880pa-s\Program\MAMAsRTRT\bin\x64\Debug\
   
@@ -39,5 +39,5 @@ C:\Users\ma2880pa-s\Program\MAMAsRTRT\D3D12HelloTriangle.cpp(866): warning C4305
      Files :         2         0         2         0         0         0
      Bytes :   12.85 m         0   12.85 m         0         0         0
      Times :   0:00:00   0:00:00                       0:00:00   0:00:00
-     Ended : den 10 december 2023 19:58:57
+     Ended : den 11 december 2023 11:06:13
   

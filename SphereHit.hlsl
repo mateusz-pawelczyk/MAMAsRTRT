@@ -39,7 +39,7 @@ float3 GetCameraPositionFromViewMatrix(float4x4 inverseViewMatrix) {
 	return mul(viewI, float4(0, 0, 0, 1)).xyz;
 }
 
-
+	
 // Retrieve hit world position.
 float3 HitWorldPosition()
 {
@@ -138,13 +138,13 @@ float3 HitWorldPosition()
 		color = float3(1.f, 1.f, 0.f);
 	if (PrimitiveIndex() == 5)
 		color = float3(1.f, 1.f, 1.f);
-	if (g_Materials[0].specularColor.w >= 0.7)
+	if (false)
 	{
 		payload.colorAndDistance = float4(g_Materials[1].diffuseColor.xyz, RayTCurrent());
 
 	}
 	else {
-		payload.colorAndDistance = float4(g_Materials[0].diffuseColor.xyz, RayTCurrent());
+		payload.colorAndDistance = float4(g_Materials[1].diffuseColor.xyz, RayTCurrent());
 
 	}
 

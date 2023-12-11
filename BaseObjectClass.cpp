@@ -121,12 +121,11 @@ void BaseObjectClass::createMaterialBuffers()
 		&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),
 		D3D12_HEAP_FLAG_NONE,
 		&resourceDesc,
-		D3D12_RESOURCE_STATE_GENERIC_READ,
+		D3D12_RESOURCE_STATE_GENERIC_READ,	
 		nullptr,
 		IID_PPV_ARGS(&m_materialBuffer));
 
 	if (FAILED(hr)) {
-		// Handle the error, e.g., throw an exception or return an error code
 		throw std::runtime_error("Failed to create material buffer.");
 	}
 }

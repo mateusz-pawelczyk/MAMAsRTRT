@@ -847,7 +847,7 @@ void D3D12HelloTriangle::CreateAccelerationStructures() {
   std::vector<ComPtr<ID3D12Resource>> resultBuffers = blasBuilder.BuildBLAS(m_commandList);
   Material sphere1Mat;
   sphere1Mat.emissiveness = 0.8;
-  sphere1Mat.diffuseColor = XMVECTOR{ 1.0f, 1.0f, 1.0f, 1.0f };
+  sphere1Mat.diffuseColor = XMVECTOR{ 0.0f, 1.0f, 1.0f, 1.0f };
   sphere1Mat.specularColor = XMVECTOR{ 1.0f, 1.0f, 1.0f, 1.0f };
   sphere1Mat.emissiveColor = XMVECTOR{ 1.0f, 1.0f, 0.0f, 1.0f };
   sphere1Mat.refractivity = 0.8;
@@ -857,7 +857,7 @@ void D3D12HelloTriangle::CreateAccelerationStructures() {
 
   Material sphere2Mat;
   sphere2Mat.emissiveness = 0.8;
-  sphere2Mat.diffuseColor = XMVECTOR{ 1.0f, 1.0f, 1.0f, 1.0f };
+  sphere2Mat.diffuseColor = XMVECTOR{ 1.0f, 0.0f, 0.0f, 1.0f };
   sphere2Mat.specularColor = XMVECTOR{ 1.0f, 1.0f, 1.0f, 1.0f };
   sphere2Mat.emissiveColor = XMVECTOR{ 1.0f, 1.0f, 0.0f, 1.0f };
   sphere2Mat.refractivity = 0.8;
@@ -978,7 +978,7 @@ ComPtr<ID3D12RootSignature> D3D12HelloTriangle::CreateSphereHitGroupSignature() 
 		2} ,
 	   {1 /*b1*/, 1, 1, D3D12_DESCRIPTOR_RANGE_TYPE_CBV /*scene parameters*/,
 		3},
-		{0 /*t1*/, 1, 0, D3D12_DESCRIPTOR_RANGE_TYPE_SRV /*material*/,
+		{0 /*t0*/, 1, 0, D3D12_DESCRIPTOR_RANGE_TYPE_SRV /*material*/,
 		4}
   });
   return rsc.Generate(m_device.Get(), true);
