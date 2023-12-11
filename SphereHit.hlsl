@@ -29,6 +29,7 @@ struct Material {
 	float reflectivity;
 	float refractivity;
 	float refractionIndex;
+	float padding[3];
 };
 
 StructuredBuffer<Material> g_Materials : register(t0);
@@ -138,15 +139,10 @@ float3 HitWorldPosition()
 		color = float3(1.f, 1.f, 0.f);
 	if (PrimitiveIndex() == 5)
 		color = float3(1.f, 1.f, 1.f);
-	if (false)
-	{
-		payload.colorAndDistance = float4(g_Materials[1].diffuseColor.xyz, RayTCurrent());
 
-	}
-	else {
-		payload.colorAndDistance = float4(g_Materials[1].diffuseColor.xyz, RayTCurrent());
+	payload.colorAndDistance = float4(g_Materials[InstanceID()].emissiveColor.xyz, RayTCurrent());
 
-	}
+	
 
 	
 	//normalize(normalize(float3(0.0f, elapsedTime, 0.0f)) + normalize(float3(0.0f, 0.0f , 1 - elapsedTime)))

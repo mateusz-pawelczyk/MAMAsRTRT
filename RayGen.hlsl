@@ -34,7 +34,7 @@ cbuffer CameraParams : register(b0)
 
 	  // Inside some shader logic, when you need a random value:
 	  ng.seed = Cycle(ng.seed);
-	  float randomValue = GetCurrentFloat(ng.seed);
+	  float randomValue = GetRandomFloat(ng.seed, 0.f, 1.f);
 
 	  // Now use randomValue for your purposes
 

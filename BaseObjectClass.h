@@ -14,6 +14,8 @@ struct Instance
 	XMMATRIX invTransform;
 };
 
+// Make sure to use correct alignment! In this case (maybe also in general) we had to make sure that the accumulated sizes add up to a multiple of 16.
+// Otherwise the access in the shader will not be correct.
 struct alignas(16)  Material {
 	XMVECTOR diffuseColor;
 	XMVECTOR specularColor;
@@ -23,6 +25,7 @@ struct alignas(16)  Material {
 	float reflectivity;
 	float refractivity;
 	float refractionIndex;
+	float padding[3];		// <---- adding padding for alignment
 
 };
 

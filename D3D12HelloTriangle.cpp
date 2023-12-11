@@ -848,8 +848,8 @@ void D3D12HelloTriangle::CreateAccelerationStructures() {
   Material sphere1Mat;
   sphere1Mat.emissiveness = 0.8;
   sphere1Mat.diffuseColor = XMVECTOR{ 0.0f, 1.0f, 1.0f, 1.0f };
-  sphere1Mat.specularColor = XMVECTOR{ 1.0f, 1.0f, 1.0f, 1.0f };
-  sphere1Mat.emissiveColor = XMVECTOR{ 1.0f, 1.0f, 0.0f, 1.0f };
+  sphere1Mat.specularColor = XMVECTOR{ 0.0f, 0.0f, 1.0f, 1.0f };
+  sphere1Mat.emissiveColor = XMVECTOR{ 0.0f, 0.0f, 1.0f, 1.0f };
   sphere1Mat.refractivity = 0.8;
   sphere1Mat.refractionIndex = 0.8;
   sphere1Mat.reflectivity = 0.8;
@@ -858,12 +858,12 @@ void D3D12HelloTriangle::CreateAccelerationStructures() {
   Material sphere2Mat;
   sphere2Mat.emissiveness = 0.8;
   sphere2Mat.diffuseColor = XMVECTOR{ 1.0f, 0.0f, 0.0f, 1.0f };
-  sphere2Mat.specularColor = XMVECTOR{ 1.0f, 1.0f, 1.0f, 1.0f };
+  sphere2Mat.specularColor = XMVECTOR{ 0.0f, 1.0f, 0.0f, 1.0f };
   sphere2Mat.emissiveColor = XMVECTOR{ 1.0f, 1.0f, 0.0f, 1.0f };
   sphere2Mat.refractivity = 0.8;
-  sphere2Mat.refractionIndex = 0.8;
+  sphere2Mat.refractionIndex = 0.2;
   sphere2Mat.reflectivity = 0.8;
-  sphere2Mat.specularPower = 0.8;
+  sphere2Mat.specularPower = 0.2;
 
 
   m_sphere->addInstance(XMMatrixTranslation(2.0f, 2.0f, -2.0f), sphere1Mat);
@@ -874,7 +874,6 @@ void D3D12HelloTriangle::CreateAccelerationStructures() {
   // 3 instances of the triangle
   // 3 instances of the triangle + a plane
   m_instances = {
-	  {mengerBottomLevelBuffers.pResult, XMMatrixTranslation(3.f, 3.0f, 0)},
 	  {m_sphere->asBuffers.pResult,  m_sphere->getInstance(0).transform},
 	  {m_sphere->asBuffers.pResult,  m_sphere->getInstance(1).transform},
 	  //{resultBuffers[0], XMMatrixTranslation(0.6f, 0.01f, 0)},
@@ -1259,17 +1258,7 @@ void D3D12HelloTriangle::CreateShaderBindingTable() {
   // as a root parameter in its primary hit shader. The shadow hit only sets a
   // boolean m_visibility in the payload, and does not require external data
   //for (int i = 0; i < 3; ++i)
-  {
-    m_sbtHelper.AddHitGroup(
-        L"HitGroup",
-        {(void *)(m_mengerVB->GetGPUVirtualAddress()),
-         (void *)(m_mengerIB->GetGPUVirtualAddress()),
-         (void *)(m_perInstanceConstantBuffers[0]->GetGPUVirtualAddress()),
-		 (void *)(m_cameraBuffer->GetGPUVirtualAddress())
-		});
-    // #DXR Extra - Another ray type
-    m_sbtHelper.AddHitGroup(L"ShadowHitGroup", {});
-  }
+
 
   //{
 	 // m_sbtHelper.AddHitGroup(
