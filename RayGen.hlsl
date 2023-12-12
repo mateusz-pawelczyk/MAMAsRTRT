@@ -2,7 +2,14 @@
 
 // Raytracing output texture, accessed as a UAV
 RWTexture2D<float4> gOutput : register(u0);
+RWTexture2D<float4> gAccumulatedOutput : register(u1);
+cbuffer frameIndex : register(b1)
+{
 
+	float frameIndex;
+	bool cameraMoved;
+
+};
 // Raytracing acceleration structure, accessed as a SRV
 RaytracingAccelerationStructure SceneBVH : register(t0);
 
@@ -26,9 +33,10 @@ cbuffer CameraParams : register(b0)
   float2 dims = float2(DispatchRaysDimensions().xy);
   NumberGenerator ng;
   ng.seed = SetSeed(123456789);
+
   // Perspective
   float3 color = float3(0.0f, 0.0f, 0.0f);
-  for (int i = 0; i < 32; ++i)
+  for (int i = 0; i < 64; ++i)
   {
 	  
 
@@ -54,6 +62,9 @@ cbuffer CameraParams : register(b0)
 	  ray.TMin = 0;
 	  ray.TMax = 100000;
 	  
+	  payload.colorAndDistance = float4(0, 0, 0, float(i));
+
+
 	  // Trace the ray
 	  TraceRay(
 		  // Parameter name: AccelerationStructure
@@ -109,5 +120,18 @@ cbuffer CameraParams : register(b0)
 	  color += payload.colorAndDistance.rgb;
   }
   
-  gOutput[launchIndex] = float4(color / 32.0f, 1.f);
+
+
+  if (cameraMoved == false && frameIndex > 0)
+  {
+	  gAccumulatedOutput[launchIndex] += float4(color / 64.0f, 1.f);
+
+	  gOutput[launchIndex] = gAccumulatedOutput[launchIndex] / frameIndex;
+  }
+  else {
+	  gOutput[launchIndex] = float4(color / 64.0f, 1.f);
+	  gAccumulatedOutput[launchIndex] = float4(color / 64.0f, 1.f);//float4(.0f, .0f, .0f, 1.f);
+
+  }
+
 }

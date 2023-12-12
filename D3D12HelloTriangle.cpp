@@ -47,7 +47,7 @@ void D3D12HelloTriangle::OnInit() {
       glm::vec3(1.5f, 1.5f, 1.5f), glm::vec3(0, 0, 0), glm::vec3(0, 1, 0));
   startTime = std::chrono::high_resolution_clock::now();
 
-
+  m_frameBuffer.cameraMoved = false;
   LoadPipeline();
   LoadAssets();
 
@@ -82,6 +82,7 @@ void D3D12HelloTriangle::OnInit() {
   // Allocate the buffer storing the raytracing output, with the same dimensions
   // as the target image
   CreateRaytracingOutputBuffer(); // #DXR
+  CreateRaytracingAccumulatedOutputBuffer(); // #DXR
 
   // #DXR Extra - Refitting
   CreateInstancePropertiesBuffer();
@@ -91,7 +92,7 @@ void D3D12HelloTriangle::OnInit() {
   CreateCameraBuffer();
 
   CreateSceneConstantBuffer();
-
+  CreateFrameIndexConstantBuffer();
   // Create the buffer containing the raytracing result (always output in a
   // UAV), and create the heap referencing the resources used by the raytracing,
   // such as the acceleration structure
@@ -106,6 +107,7 @@ void D3D12HelloTriangle::OnInit() {
 // Load the rendering pipeline dependencies.
 void D3D12HelloTriangle::LoadPipeline() {
   UINT dxgiFactoryFlags = 0;
+
 
 
 #if defined(_DEBUG)
@@ -435,12 +437,16 @@ void D3D12HelloTriangle::OnUpdate() {
   // Increment the time counter at each frame, and update the corresponding
   // instance matrix of the first triangle to animate its position
   m_time++;
+  m_frameBuffer.frameIndex++;
+  UpdateFrameIndexConstantBuffer();
  /* m_instances[0].second =
       XMMatrixRotationAxis({0.f, 1.f, 0.f},
                            static_cast<float>(m_time) / 50.0f) *
       XMMatrixTranslation(0.f, 0.1f * cosf(m_time / 20.f), 0.f);*/
   // #DXR Extra - Refitting
   UpdateInstancePropertiesBuffer();
+  m_frameBuffer.cameraMoved = false;
+
 }
 
 // Render the scene.
@@ -915,6 +921,8 @@ void D3D12HelloTriangle::CreateAccelerationStructures() {
 
 ComPtr<ID3D12RootSignature> D3D12HelloTriangle::CreateRayGenSignature() {
   nv_helpers_dx12::RootSignatureGenerator rsc;
+  rsc.AddRootParameter(D3D12_ROOT_PARAMETER_TYPE_CBV, 1 /*b1*/); // frame index
+
   rsc.AddHeapRangesParameter(
       {{0 /*u0*/, 1 /*1 descriptor */, 0 /*use the implicit register space 0*/,
         D3D12_DESCRIPTOR_RANGE_TYPE_UAV /* UAV representing the output buffer*/,
@@ -923,7 +931,10 @@ ComPtr<ID3D12RootSignature> D3D12HelloTriangle::CreateRayGenSignature() {
         D3D12_DESCRIPTOR_RANGE_TYPE_SRV /*Top-level acceleration structure*/,
         1},
        {0 /*b0*/, 1, 0, D3D12_DESCRIPTOR_RANGE_TYPE_CBV /*Camera parameters*/,
-        2}});
+        2},
+	  {1 /*u0*/, 1 /*1 descriptor */, 0 /*use the implicit register space 0*/,
+		D3D12_DESCRIPTOR_RANGE_TYPE_UAV /* UAV representing the output buffer*/,
+		5 /*heap slot where the UAV is defined*/} });
 
   return rsc.Generate(m_device.Get(), true);
 }
@@ -955,6 +966,8 @@ ComPtr<ID3D12RootSignature> D3D12HelloTriangle::CreateHitSignature() {
   rsc.AddHeapRangesParameter({
       {2 /*t2*/, 1, 0, D3D12_DESCRIPTOR_RANGE_TYPE_SRV,
        1 /*2nd slot of the heap*/},
+	   {1 /*b1*/, 1, 1, D3D12_DESCRIPTOR_RANGE_TYPE_CBV /*scene parameters*/,
+		3}
   });
   return rsc.Generate(m_device.Get(), true);
 }
@@ -1145,6 +1158,34 @@ void D3D12HelloTriangle::CreateRaytracingOutputBuffer() {
 
 //-----------------------------------------------------------------------------
 //
+// Allocate the buffer holding the raytracing output, with the same size as the
+// output image
+//
+void D3D12HelloTriangle::CreateRaytracingAccumulatedOutputBuffer() {
+	D3D12_RESOURCE_DESC resDesc = {};
+	resDesc.DepthOrArraySize = 1;
+	resDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
+
+	// Use a high-precision floating-point format for HDR
+	resDesc.Format = DXGI_FORMAT_R32G32B32A32_FLOAT;
+
+	resDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
+	resDesc.Width = GetWidth();
+	resDesc.Height = GetHeight();
+	resDesc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
+	resDesc.MipLevels = 1;
+	resDesc.SampleDesc.Count = 1;
+
+	// Create the resource
+	ThrowIfFailed(m_device->CreateCommittedResource(
+		&nv_helpers_dx12::kDefaultHeapProps, D3D12_HEAP_FLAG_NONE, &resDesc,
+		D3D12_RESOURCE_STATE_COPY_SOURCE, nullptr,
+		IID_PPV_ARGS(&m_accumulatedOutputResource)));
+}
+
+
+//-----------------------------------------------------------------------------
+//
 // Create the main heap used by the shaders, which will give access to the
 // raytracing output and the top-level acceleration structure
 //
@@ -1153,7 +1194,7 @@ void D3D12HelloTriangle::CreateShaderResourceHeap() {
 	// We now need 4 entries - 1 SRV for the TLAS, 1 UAV for the raytracing output, 
 	// 1 CBV for the camera matrices, and 1 CBV for the SceneConstantBuffer
 	m_srvUavHeap = nv_helpers_dx12::CreateDescriptorHeap(
-		m_device.Get(), 5, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, true);
+		m_device.Get(), 6, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, true);
 
 
   // Get a handle to the heap memory on the CPU side, to be able to write the
@@ -1216,7 +1257,13 @@ void D3D12HelloTriangle::CreateShaderResourceHeap() {
   srvDescMaterial.Buffer.Flags = D3D12_BUFFER_SRV_FLAG_NONE;
   m_device->CreateShaderResourceView(BaseObjectClass::m_materialBuffer.Get(), &srvDescMaterial, srvHandle); //CHANGE!!!!!!!!!!!!!!!!!
 
+  srvHandle.ptr += m_device->GetDescriptorHandleIncrementSize(
+	  D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 
+  D3D12_UNORDERED_ACCESS_VIEW_DESC uavAccDesc = {};
+  uavAccDesc.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE2D;
+  m_device->CreateUnorderedAccessView(m_accumulatedOutputResource.Get(), nullptr, &uavAccDesc,
+	  srvHandle);
 }
 
 //-----------------------------------------------------------------------------
@@ -1245,7 +1292,7 @@ void D3D12HelloTriangle::CreateShaderBindingTable() {
   auto heapPointer = reinterpret_cast<UINT64 *>(srvUavHeapHandle.ptr);
 
   // The ray generation only uses heap data
-  m_sbtHelper.AddRayGenerationProgram(L"RayGen", {heapPointer});
+  m_sbtHelper.AddRayGenerationProgram(L"RayGen", { (void*)(m_frameIndexConstantBuffer->GetGPUVirtualAddress()), heapPointer});
 
   // The miss and hit shaders do not access any external resources: instead they
   // communicate their results through the ray payload
@@ -1433,6 +1480,29 @@ void D3D12HelloTriangle::UpdateSceneConstantBuffer() {
 	}
 }
 
+void D3D12HelloTriangle::CreateFrameIndexConstantBuffer() {
+	m_frameIndexConstantBufferSize = sizeof(FrameBuffer);
+	m_frameIndexConstantBufferSize = (m_frameIndexConstantBufferSize + 255) & ~255; // Align to 256 bytes
+
+
+	m_frameIndexConstantBuffer = nv_helpers_dx12::CreateBuffer(
+		m_device.Get(), m_frameIndexConstantBufferSize, D3D12_RESOURCE_FLAG_NONE,
+		D3D12_RESOURCE_STATE_GENERIC_READ, nv_helpers_dx12::kUploadHeapProps);
+}
+
+void D3D12HelloTriangle::UpdateFrameIndexConstantBuffer() {
+	uint8_t* pData = nullptr;
+	ThrowIfFailed(m_frameIndexConstantBuffer->Map(0, nullptr, reinterpret_cast<void**>(&pData)));
+
+	if (pData) {
+		memcpy(pData, &m_frameBuffer, sizeof(FrameBuffer)); // Copy actual data size
+		m_frameIndexConstantBuffer->Unmap(0, nullptr);
+	}
+	else {
+		throw std::runtime_error("Unable to map Frame constant buffer.");
+	}
+}
+
 
 
 //--------------------------------------------------------------------------------------------------
@@ -1441,6 +1511,9 @@ void D3D12HelloTriangle::UpdateSceneConstantBuffer() {
 void D3D12HelloTriangle::OnButtonDown(UINT32 lParam) {
   nv_helpers_dx12::CameraManip.setMousePosition(-GET_X_LPARAM(lParam),
                                                 -GET_Y_LPARAM(lParam));
+  m_frameBuffer.cameraMoved = true;
+  m_frameBuffer.frameIndex = 0;
+
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -1454,6 +1527,9 @@ void D3D12HelloTriangle::OnMouseMove(UINT8 wParam, UINT32 lParam) {
   inputs.rmb = wParam & MK_RBUTTON;
   if (!inputs.lmb && !inputs.rmb && !inputs.mmb)
     return; // no mouse button pressed
+  m_frameBuffer.cameraMoved = true;
+  m_frameBuffer.frameIndex = 0;
+
 
   inputs.ctrl = GetAsyncKeyState(VK_CONTROL);
   inputs.shift = GetAsyncKeyState(VK_SHIFT);

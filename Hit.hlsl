@@ -34,16 +34,18 @@ cbuffer CameraParams : register(b1) {
 	float4x4 projectionI; // Inverse of the projection matrix
 }
 
-
+cbuffer SceneConstantBuffer : register(b1, space1) {
+	float4 lightPosition;
+	float4 lightAmbientColor;
+	float4 lightDiffuseColor;
+	float  elapsedTime;
+}
 
 StructuredBuffer<STriVertex> BTriVertex : register(t0);
 StructuredBuffer<int> indices : register(t1);
 
 
 static const float4 backgroundColor = float4(0.4, 0.6, 0.2, 1.0);
-static const float4 lightAmbientColor = float4(0.2, 0.2, 0.2, 1.0);
-static const float3 lightPosition = float3(3.0, 3.0, 3.0);
-static const float4 lightDiffuseColor = float4(0.5, 0.5, 0.5, 1.0);
 static const float4 lightSpecularColor = float4(1, 1, 1, 1);
 static const float4 primitiveAlbedo = float4(1.0, 0.0, 0.0, 1.0);
 static const float diffuseCoef = 0.9;
@@ -143,22 +145,29 @@ float3 HitAttribute(float3 vertexAttribute[3], BuiltInTriangleIntersectionAttrib
 	
 
 	// Calculate final color.
-	float4 phongColor = CalculatePhongLighting(float4(0.3, 0.6, 0.1, 1.0f), hitNormal, diffuseCoef, specularCoef, specularPower);
+	//float4 phongColor = CalculatePhongLighting(float4(0.3, 0.6, 0.1, 1.0f), hitNormal, diffuseCoef, specularCoef, specularPower);
 
 	 float3 D = normalize(WorldRayDirection());
 	 float3 N = normalize(hitNormal);
 
+
+	 uint seed = GenerateSeed(DispatchRaysIndex().x + DispatchRaysIndex().y * DispatchRaysDimensions().x, elapsedTime, payload.colorAndDistance.w);
+	 
+
+	 float3 reflectedDirecion = random_on_hemisphere(N, seed);
+
+
 	// reflection
 	RayDesc ray;
 	ray.Origin = HitWorldPosition();
-	ray.Direction = normalize(reflect(D, N));
+	ray.Direction = normalize(reflectedDirecion);//reflect(D, N));
 	ray.TMin = 0.01;
 	ray.TMax = 100000;
 
 	// Initialize the ray payload
-	HitInfo reflectionPayload;
-	reflectionPayload.colorAndDistance = float4(0, 0, 0, 0);
-	reflectionPayload.depth = payload.depth - 1;
+	HitInfo diffusePayload;
+	diffusePayload.colorAndDistance = float4(0, 0, 0, 0);
+	diffusePayload.depth = payload.depth - 1;
 
 	
 
@@ -209,6 +218,73 @@ float3 HitAttribute(float3 vertexAttribute[3], BuiltInTriangleIntersectionAttrib
 		// Parameter name: Ray
 		// Ray information to trace
 		ray,
+
+		// Parameter name: Payload
+		// Payload associated to the ray, which will be used to communicate
+		// between the hit/miss shaders and the raygen
+		diffusePayload);
+
+	// reflection
+	RayDesc rayReflect;
+	rayReflect.Origin = HitWorldPosition();
+	rayReflect.Direction = reflect(D, N);
+	rayReflect.TMin = 0.01;
+	rayReflect.TMax = 100000;
+
+	// Initialize the ray payload
+	HitInfo reflectionPayload;
+	reflectionPayload.colorAndDistance = float4(0, 0, 0, 0);
+	reflectionPayload.depth = payload.depth - 1;
+
+
+
+	// Trace the ray
+	TraceRay(
+		// Parameter name: AccelerationStructure
+		// Acceleration structure
+		SceneBVH,
+
+		// Parameter name: RayFlags
+		// Flags can be used to specify the behavior upon hitting a surface
+		RAY_FLAG_NONE,
+
+		// Parameter name: InstanceInclusionMask
+		// Instance inclusion mask, which can be used to mask out some geometry to
+		// this ray by and-ing the mask with a geometry mask. The 0xFF flag then
+		// indicates no geometry will be masked
+		0xFF,
+
+		// Parameter name: RayContributionToHitGroupIndex
+		// Depending on the type of ray, a given object can have several hit
+		// groups attached (ie. what to do when hitting to compute regular
+		// shading, and what to do when hitting to compute shadows). Those hit
+		// groups are specified sequentially in the SBT, so the value below
+		// indicates which offset (on 4 bits) to apply to the hit groups for this
+		// ray. In this sample we only have one hit group per object, hence an
+		// offset of 0.
+		0,
+
+		// Parameter name: MultiplierForGeometryContributionToHitGroupIndex
+		// The offsets in the SBT can be computed from the object ID, its instance
+		// ID, but also simply by the order the objects have been pushed in the
+		// acceleration structure. This allows the application to group shaders in
+		// the SBT in the same order as they are added in the AS, in which case
+		// the value below represents the stride (4 bits representing the number
+		// of hit groups) between two consecutive objects.
+		0,
+
+		// Parameter name: MissShaderIndex
+		// Index of the miss shader to use in case several consecutive miss
+		// shaders are present in the SBT. This allows to change the behavior of
+		// the program when no geometry have been hit, for example one to return a
+		// sky color for regular rendering, and another returning a full
+		// visibility value for shadow rays. This sample has only one miss shader,
+		// hence an index 0
+		0,
+
+		// Parameter name: Ray
+		// Ray information to trace
+		rayReflect,
 
 		// Parameter name: Payload
 		// Payload associated to the ray, which will be used to communicate
@@ -295,8 +371,10 @@ float3 HitAttribute(float3 vertexAttribute[3], BuiltInTriangleIntersectionAttrib
 
 
 
+		payload.colorAndDistance = float4(0.9* diffusePayload.colorAndDistance.xyz + 0.0 * float3(0.f, 0.4f, 0.f) + 0.1 * reflectionPayload.colorAndDistance.xyz, RayTCurrent());;
+
 	
-	payload.colorAndDistance = float4(reflectiveness * reflectionPayload.colorAndDistance.xyz + refractiveness * refractionPayload.colorAndDistance.xyz +(1-reflectiveness-refractiveness) * phongColor.xyz, RayTCurrent());;
+	//payload.colorAndDistance = float4(reflectiveness * reflectionPayload.colorAndDistance.xyz + refractiveness * refractionPayload.colorAndDistance.xyz +(1-reflectiveness-refractiveness) * phongColor.xyz, RayTCurrent());;
 }
 
 // #DXR Extra - Another ray type

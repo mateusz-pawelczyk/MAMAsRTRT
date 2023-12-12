@@ -88,6 +88,11 @@ private:
 	  XMFLOAT4	 lightDiffuseColor;
 	  float    elapsedTime;
   };
+  struct FrameBuffer {
+
+	  float		frameIndex;
+	  bool		cameraMoved;
+  };
 
   std::chrono::high_resolution_clock::time_point startTime;
 
@@ -191,8 +196,10 @@ private:
 
   // #DXR
   void CreateRaytracingOutputBuffer();
+  void CreateRaytracingAccumulatedOutputBuffer();
   void CreateShaderResourceHeap();
   ComPtr<ID3D12Resource> m_outputResource;
+  ComPtr<ID3D12Resource> m_accumulatedOutputResource;
   ComPtr<ID3D12DescriptorHeap> m_srvUavHeap;
 
   // #DXR
@@ -212,6 +219,13 @@ private:
   SceneConstantBuffer m_scene;
   ComPtr<ID3D12Resource> m_SceneConstantBuffer;
   uint32_t m_SceneConstantBufferSize = 0;
+
+  void CreateFrameIndexConstantBuffer();
+  void UpdateFrameIndexConstantBuffer();
+  FrameBuffer m_frameBuffer;
+  ComPtr<ID3D12Resource> m_frameIndexConstantBuffer;
+  uint32_t m_frameIndexConstantBufferSize = 0;
+
 
   Microsoft::WRL::ComPtr<ID3D12Resource> texture;
 
