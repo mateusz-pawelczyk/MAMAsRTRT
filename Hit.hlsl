@@ -394,12 +394,12 @@ float3 HitAttribute(float3 vertexAttribute[3], BuiltInTriangleIntersectionAttrib
 // #DXR Extra - Another ray type
 [shader("closesthit")] void PlaneClosestHit(inout HitInfo payload,
                                                 Attributes attrib) {
-  float3 lightPos = float3(2, 2, -2);
+
 
   // Find the world - space hit position
   float3 worldOrigin = WorldRayOrigin() + RayTCurrent() * WorldRayDirection();
 
-  float3 lightDir = normalize(lightPos - worldOrigin);
+  float3 lightDir = normalize(lightPosition - worldOrigin);
 
   // Fire a shadow ray. The direction is hard-coded here, but can be fetched
   // from a constant-buffer

@@ -427,7 +427,7 @@ void D3D12HelloTriangle::OnUpdate() {
 	// Update the SceneConstantBuffer
 	m_scene.elapsedTime = elapsedTime;
 
-	m_scene.lightPosition = XMFLOAT4(1.0f, 1.0f, 0.0f, 1.0f);
+	m_scene.lightPosition = XMFLOAT4(2.0f, 20.0f, 2.f, 1.0f);
   // #DXR Extra: Perspective Camera
   UpdateCameraBuffer();
   UpdateSceneConstantBuffer();
@@ -883,9 +883,9 @@ void D3D12HelloTriangle::CreateAccelerationStructures() {
 
 
 
-  for (int i = 0; i < 10; i++)
+  for (int i = 0; i < 1000; i++)
   {
-	  m_sphere->addInstance(XMMatrixTranslation(-5.0f + float(i), 1.0f, -1.0f), sphere1Mat);
+	  m_sphere->addInstance(XMMatrixTranslation(-500.0f + float(i), 1.0f + sin(float(i)) , -1.0f), sphere1Mat);
 	  m_instances.push_back({ m_sphere->asBuffers.pResult,  m_sphere->getInstance(i).transform });
   }
 
@@ -1338,7 +1338,7 @@ void D3D12HelloTriangle::CreateShaderBindingTable() {
 		  { (void*)(m_sphere->getInstanceBuffer(i)->GetGPUVirtualAddress())
 					  });
 	  // #DXR Extra - Another ray type
-	  m_sbtHelper.AddHitGroup(L"ShadowSphereHitGroup", {});
+	  m_sbtHelper.AddHitGroup(L"ShadowSphereHitGroup", { (void*)(m_sphere->getInstanceBuffer(i)->GetGPUVirtualAddress()) });
   }
 
   for (UINT i = 0; i < m_planeMesh->getPlaneInstanceCount(); ++i)
