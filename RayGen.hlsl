@@ -28,7 +28,7 @@ cbuffer CameraParams : register(b0)
   // Initialize the ray payload
   HitInfo payload;
   payload.colorAndDistance = float4(0, 0, 0, 0);
-  payload.depth = 4;
+  payload.depth = 2;
   uint2 launchIndex = DispatchRaysIndex().xy;
   float2 dims = float2(DispatchRaysDimensions().xy);
   NumberGenerator ng;
@@ -36,7 +36,7 @@ cbuffer CameraParams : register(b0)
 
   // Perspective
   float3 color = float3(0.0f, 0.0f, 0.0f);
-  for (int i = 0; i < 64; ++i)
+  for (int i = 0; i < 16; ++i)
   {
 	  
 
@@ -120,17 +120,17 @@ cbuffer CameraParams : register(b0)
 	  color += payload.colorAndDistance.rgb;
   }
   
-
+  float samples_per_pixel = 16.0f;
 
   if (cameraMoved == false && frameIndex > 0)
   {
-	  gAccumulatedOutput[launchIndex] += float4(color / 64.0f, 1.f);
+	  gAccumulatedOutput[launchIndex] += float4(color / samples_per_pixel, 1.f);
 
 	  gOutput[launchIndex] = gAccumulatedOutput[launchIndex] / frameIndex;
   }
   else {
-	  gOutput[launchIndex] = float4(color / 64.0f, 1.f);
-	  gAccumulatedOutput[launchIndex] = float4(color / 64.0f, 1.f);//float4(.0f, .0f, .0f, 1.f);
+	  gOutput[launchIndex] = float4(color / samples_per_pixel, 1.f);
+	  gAccumulatedOutput[launchIndex] = float4(color / samples_per_pixel, 1.f);//float4(.0f, .0f, .0f, 1.f);
 
   }
 

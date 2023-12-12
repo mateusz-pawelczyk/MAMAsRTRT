@@ -41,6 +41,20 @@ cbuffer SceneConstantBuffer : register(b1, space1) {
 	float  elapsedTime;
 }
 
+struct Material {
+	float4 diffuseColor;
+	float4 specularColor;
+	float4 emissiveColor;
+	float specularPower;
+	float emissiveness;
+	float reflectivity;
+	float refractivity;
+	float refractionIndex;
+	float padding[3];
+};
+
+StructuredBuffer<Material> g_Materials : register(t3);
+
 StructuredBuffer<STriVertex> BTriVertex : register(t0);
 StructuredBuffer<int> indices : register(t1);
 
@@ -371,7 +385,7 @@ float3 HitAttribute(float3 vertexAttribute[3], BuiltInTriangleIntersectionAttrib
 
 
 
-		payload.colorAndDistance = float4(0.9* diffusePayload.colorAndDistance.xyz + 0.0 * float3(0.f, 0.4f, 0.f) + 0.1 * reflectionPayload.colorAndDistance.xyz, RayTCurrent());;
+		payload.colorAndDistance = float4(1.0 * diffusePayload.colorAndDistance.xyz + 0.0 * float3(0.f, 0.4f, 0.f) + 0.0 * reflectionPayload.colorAndDistance.xyz + 0.0 * refractionPayload.colorAndDistance.xyz, RayTCurrent());;
 
 	
 	//payload.colorAndDistance = float4(reflectiveness * reflectionPayload.colorAndDistance.xyz + refractiveness * refractionPayload.colorAndDistance.xyz +(1-reflectiveness-refractiveness) * phongColor.xyz, RayTCurrent());;
@@ -392,7 +406,7 @@ float3 HitAttribute(float3 vertexAttribute[3], BuiltInTriangleIntersectionAttrib
   RayDesc ray;
   ray.Origin = worldOrigin;
   ray.Direction = lightDir;
-  ray.TMin = 0.01;
+  ray.TMin = 0.1;
   ray.TMax = 100000;
   bool hit = true;
 
@@ -443,6 +457,6 @@ float3 HitAttribute(float3 vertexAttribute[3], BuiltInTriangleIntersectionAttrib
   float3 barycentrics =
       float3(1.f - attrib.bary.x - attrib.bary.y, attrib.bary.x, attrib.bary.y);
   
-  float4 hitColor = float4(float3(1.0, 0.0, 0.0) * factor, RayTCurrent());
+  float4 hitColor = float4(g_Materials[InstanceID()].diffuseColor.xyz * factor, RayTCurrent());
   payload.colorAndDistance = float4(hitColor);
 }

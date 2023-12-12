@@ -822,9 +822,7 @@ void D3D12HelloTriangle::CreateTopLevelAS(
 // structure required to raytrace the scene
 //
 void D3D12HelloTriangle::CreateAccelerationStructures() {
-  // Build the bottom AS from the Triangle vertex buffer
-  AccelerationStructureBuffers bottomLevelBuffers = CreateBottomLevelAS(
-      {{m_vertexBuffer.Get(), 4}}, {{m_indexBuffer.Get(), 12}});
+
 
   // #DXR Extra: Indexed Geometry
   // Build the bottom AS from the Menger Sponge vertex buffer
@@ -845,11 +843,13 @@ void D3D12HelloTriangle::CreateAccelerationStructures() {
 
   //ProceduralGeometry proceduralSphere(-0.0f, -0.0f, -0.0f, 1.0f, 1.0f, 1.0f, m_device);
   m_sphere = new Sphere( 0.4f, m_device);
+  m_planeMesh = new Plane(XMFLOAT3(-100.f, -2.0f, -100.f), XMFLOAT3(100.f, -2.f, 100.f), m_device);
 
 
   BLASBuilder blasBuilder(m_device);
   //blasBuilder.AddGeometry(m_sphereMesh);
   blasBuilder.AddGeometry(m_sphere);
+  blasBuilder.AddGeometry(m_planeMesh);
   std::vector<ComPtr<ID3D12Resource>> resultBuffers = blasBuilder.BuildBLAS(m_commandList);
   Material sphere1Mat;
   sphere1Mat.emissiveness = 0.8;
@@ -871,26 +871,30 @@ void D3D12HelloTriangle::CreateAccelerationStructures() {
   sphere2Mat.reflectivity = 0.8;
   sphere2Mat.specularPower = 0.2;
 
+  Material planeMat;
+  planeMat.emissiveness = 0.8;
+  planeMat.diffuseColor = XMVECTOR{ .2f, 0.7f, 0.1f, 1.0f };
+  planeMat.specularColor = XMVECTOR{ 0.0f, 1.0f, 0.0f, 1.0f };
+  planeMat.emissiveColor = XMVECTOR{ 1.0f, 1.0f, 0.0f, 1.0f };
+  planeMat.refractivity = 0.8;
+  planeMat.refractionIndex = 0.2;
+  planeMat.reflectivity = 0.8;
+  planeMat.specularPower = 0.2;
 
-  m_sphere->addInstance(XMMatrixTranslation(2.0f, 2.0f, -2.0f), sphere1Mat);
-  m_sphere->addInstance(sphere2Mat);
 
-  // Just one instance for now
-  // #DXR Extra: Per-Instance Data
-  // 3 instances of the triangle
-  // 3 instances of the triangle + a plane
-  m_instances = {
-	  {m_sphere->asBuffers.pResult,  m_sphere->getInstance(0).transform},
-	  {m_sphere->asBuffers.pResult,  m_sphere->getInstance(1).transform},
-	  //{resultBuffers[0], XMMatrixTranslation(0.6f, 0.01f, 0)},
-	  {sphereBottomLevelBuffers.pResult,  XMMatrixTranslation(0.6f, 0.01f, 0)},
-	  //{sphereBottomLevelBuffers.pResult, XMMatrixTranslation(0.6f, 0.01f, 0)},
 
-	  //{bottomLevelBuffers.pResult, XMMatrixTranslation(.6f, 0, 0)},
-	  //{bottomLevelBuffers.pResult, XMMatrixTranslation(-.6f, 0, 0)},
-	  // #DXR Extra: Per-Instance Data
-	  {planeBottomLevelBuffers.pResult, XMMatrixTranslation(0, 0.0, 0)},
-	  {planeBottomLevelBuffers.pResult, XMMatrixRotationX(XM_PIDIV2) * XMMatrixTranslation(0.0, 0.0f, 1.8f)} }; // Adjust position as needed};
+  for (int i = 0; i < 10; i++)
+  {
+	  m_sphere->addInstance(XMMatrixTranslation(-5.0f + float(i), 1.0f, -1.0f), sphere1Mat);
+	  m_instances.push_back({ m_sphere->asBuffers.pResult,  m_sphere->getInstance(i).transform });
+  }
+
+  m_planeMesh->addInstance(XMMatrixIdentity(), planeMat);
+  m_instances.push_back({ m_planeMesh->asBuffers.pResult,  m_planeMesh->getInstance(0).transform });
+
+
+  m_instances.push_back({ sphereBottomLevelBuffers.pResult,  XMMatrixTranslation(0.6f, 0.01f, 0) });
+
 
   CreateTopLevelAS(m_instances);
 
@@ -909,9 +913,7 @@ void D3D12HelloTriangle::CreateAccelerationStructures() {
   ThrowIfFailed(
       m_commandList->Reset(m_commandAllocator.Get(), m_pipelineState.Get()));
 
-  // Store the AS buffers. The rest of the buffers will be released once we exit
-  // the function
-  m_bottomLevelAS = bottomLevelBuffers.pResult;
+
 }
 
 //-----------------------------------------------------------------------------
@@ -967,7 +969,9 @@ ComPtr<ID3D12RootSignature> D3D12HelloTriangle::CreateHitSignature() {
       {2 /*t2*/, 1, 0, D3D12_DESCRIPTOR_RANGE_TYPE_SRV,
        1 /*2nd slot of the heap*/},
 	   {1 /*b1*/, 1, 1, D3D12_DESCRIPTOR_RANGE_TYPE_CBV /*scene parameters*/,
-		3}
+		3},
+		{3 /*t4*/, 1, 0, D3D12_DESCRIPTOR_RANGE_TYPE_SRV /*material*/,
+		4}
   });
   return rsc.Generate(m_device.Get(), true);
 }
@@ -1027,6 +1031,11 @@ void D3D12HelloTriangle::CreateRaytracingPipeline() {
   m_sphereHitLibrary = nv_helpers_dx12::CompileShaderLibrary(L"SphereHit.hlsl");
   m_sphereIntersectionLibrary = nv_helpers_dx12::CompileShaderLibrary(L"Intersection.hlsl");
 
+  m_sphereShadowHitLibrary = nv_helpers_dx12::CompileShaderLibrary(L"ShadowRaySphere.hlsl");
+  pipeline.AddLibrary(m_sphereShadowHitLibrary.Get(),
+	  { L"ShadowSphereClosestHit", L"ShadowSphereMiss" });
+  m_shadowSphereSignature = CreateSphereHitGroupSignature();
+
   // #DXR Extra - Another ray type
   m_shadowLibrary = nv_helpers_dx12::CompileShaderLibrary(L"ShadowRay.hlsl");
   pipeline.AddLibrary(m_shadowLibrary.Get(),
@@ -1077,6 +1086,8 @@ void D3D12HelloTriangle::CreateRaytracingPipeline() {
   // Hit group for all geometry when hit by a shadow ray
   pipeline.AddHitGroup(L"ShadowHitGroup", L"ShadowClosestHit");
 
+  pipeline.AddHitGroup(L"ShadowSphereHitGroup", L"ShadowSphereClosestHit", L"", L"SphereIntersection", D3D12_HIT_GROUP_TYPE_PROCEDURAL_PRIMITIVE);
+
   pipeline.AddHitGroup(L"SphereHitGroup",  L"SphereClosestHit",  L"", L"SphereIntersection", D3D12_HIT_GROUP_TYPE_PROCEDURAL_PRIMITIVE);
 
   // The following section associates the root signature to each shader. Note
@@ -1092,11 +1103,14 @@ void D3D12HelloTriangle::CreateRaytracingPipeline() {
   pipeline.AddRootSignatureAssociation(m_shadowSignature.Get(),
                                        {L"ShadowHitGroup"});
 
+  pipeline.AddRootSignatureAssociation(m_shadowSphereSignature.Get(),
+	  { L"ShadowSphereHitGroup" });
+
   pipeline.AddRootSignatureAssociation(m_sphereHitGroupSignature.Get(), { L"SphereHitGroup" });
 
   // #DXR Extra - Another ray type
   pipeline.AddRootSignatureAssociation(m_missSignature.Get(),
-                                       {L"Miss", L"ShadowMiss"});
+                                       {L"Miss", L"ShadowMiss", L"ShadowSphereMiss"});
 
   // #DXR Extra: Per-Instance Data
   pipeline.AddRootSignatureAssociation(m_hitSignature.Get(),
@@ -1112,7 +1126,7 @@ void D3D12HelloTriangle::CreateRaytracingPipeline() {
   // our sample we just use the barycentric coordinates defined by the weights
   // u,v of the last two vertices of the triangle. The actual barycentrics can
   // be obtained using float3 barycentrics = float3(1.f-u-v, u, v);
-  pipeline.SetMaxAttributeSize(2 * sizeof(float)); // barycentric coordinates or uv corrdinates for sphere
+  pipeline.SetMaxAttributeSize(5 * sizeof(float)); // barycentric coordinates or uv corrdinates for sphere
 
   // The raytracing process can shoot rays from existing hit points, resulting
   // in nested TraceRay calls. Our sample code traces only primary rays, which
@@ -1317,12 +1331,19 @@ void D3D12HelloTriangle::CreateShaderBindingTable() {
 	 // // #DXR Extra - Another ray type
 	 // m_sbtHelper.AddHitGroup(L"ShadowHitGroup", {});
   //}
-  for (UINT i = 0; i < m_sphere->getInstanceCount(); ++i)
+  for (UINT i = 0; i < m_sphere->getSphereInstanceCount(); ++i)
   {
 	  m_sbtHelper.AddHitGroup(
 		  L"SphereHitGroup",
 		  { (void*)(m_sphere->getInstanceBuffer(i)->GetGPUVirtualAddress())
 					  });
+	  // #DXR Extra - Another ray type
+	  m_sbtHelper.AddHitGroup(L"ShadowSphereHitGroup", {});
+  }
+
+  for (UINT i = 0; i < m_planeMesh->getPlaneInstanceCount(); ++i)
+  {
+	  m_sbtHelper.AddHitGroup(L"PlaneHitGroup", { heapPointer });
 	  // #DXR Extra - Another ray type
 	  m_sbtHelper.AddHitGroup(L"ShadowHitGroup", {});
   }
@@ -1340,20 +1361,8 @@ void D3D12HelloTriangle::CreateShaderBindingTable() {
 
 
 
-  // The plane also uses a constant buffer for its vertex colors
-  // #DXR Extra: Per-Instance Data
-  // Adding the plane
-  m_sbtHelper.AddHitGroup(L"PlaneHitGroup", {heapPointer});
-  // #DXR Extra - Another ray type
-  m_sbtHelper.AddHitGroup(L"ShadowHitGroup", {});
 
 
-  // The plane also uses a constant buffer for its vertex colors
-  // #DXR Extra: Per-Instance Data
-  // Adding the plane
-  m_sbtHelper.AddHitGroup(L"PlaneHitGroup", { heapPointer });
-  // #DXR Extra - Another ray type
-  m_sbtHelper.AddHitGroup(L"ShadowHitGroup", {});
 
   // Compute the size of the SBT given the number of shaders and their
   // parameters

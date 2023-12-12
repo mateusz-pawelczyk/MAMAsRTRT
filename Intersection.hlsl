@@ -6,6 +6,8 @@ struct Sphere {
 	float3 center;
 	float radius;
 };
+
+
 cbuffer SceneConstantBuffer : register(b1, space1) {
 	float4 lightPosition;
 	float4 lightAmbientColor;
@@ -57,10 +59,11 @@ float3 objectRaDirection()
 			float u = atan2(N.z, N.x) / (2 * 3.14159265359f);
 			float v = (acos(N.y / sphere.radius) / 3.14159265359f);
 			attr.uv = float2(u, 1.0f - v); // Adjust V if necessary
-
+			attr.normal = P;
 			ReportHit(t, 0, attr);
 		}
 	}
 	
 	
 }
+

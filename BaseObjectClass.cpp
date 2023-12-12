@@ -22,6 +22,8 @@ void BaseObjectClass::addInstance(Material material)
 	m_instances.push_back(instance);
 	m_materials.push_back(material);
 
+	addDerivedInstance();
+
 	totalInstanceCount++;
 }
 
@@ -33,6 +35,8 @@ void BaseObjectClass::addInstance(XMMATRIX transformation, Material material)
 
 	m_instances.push_back(instance);
 	m_materials.push_back(material);
+
+	addDerivedInstance();
 
 	totalInstanceCount++;
 }

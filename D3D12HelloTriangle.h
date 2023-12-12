@@ -22,9 +22,11 @@
 #include "nv_helpers_dx12/TopLevelASGenerator.h"
 
 #include "Mesh.h"
+#include "Plane.h"
 #include "ProceduralGeometry.h"
 #include "Sphere.h"
 #include "ObjectStructs.h"
+
 
 using namespace DirectX;
 
@@ -181,6 +183,7 @@ private:
   ComPtr<IDxcBlob> m_hitLibrary;
   ComPtr<IDxcBlob> m_missLibrary;
   ComPtr<IDxcBlob> m_sphereHitLibrary;
+  ComPtr<IDxcBlob> m_sphereShadowHitLibrary;
   ComPtr<IDxcBlob> m_sphereIntersectionLibrary;
 
   ComPtr<ID3D12RootSignature> m_rayGenSignature;
@@ -229,7 +232,7 @@ private:
 
   Microsoft::WRL::ComPtr<ID3D12Resource> texture;
 
- 
+
 
 
   // #DXR Extra: Perspective Camera++
@@ -270,8 +273,10 @@ private:
   UINT m_mengerVertexCount;
 
   Mesh* m_sphereMesh;
+  Plane* m_planeMesh;
 
   Sphere* m_sphere;
+
 
 
 
@@ -279,6 +284,7 @@ private:
   // #DXR Extra - Another ray type
   ComPtr<IDxcBlob> m_shadowLibrary;
   ComPtr<ID3D12RootSignature> m_shadowSignature;
+  ComPtr<ID3D12RootSignature> m_shadowSphereSignature;
 
   // #DXR Extra - Refitting
   uint32_t m_time = 0;

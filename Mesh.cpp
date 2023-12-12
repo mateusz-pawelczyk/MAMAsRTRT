@@ -8,6 +8,10 @@ inline void ThrowIfFailed(HRESULT hr)
 		throw std::exception();
 	}
 }
+UINT Mesh::meshInstanceCount = 0;
+
+void Mesh::addDerivedInstance() { meshInstanceCount++; }
+
 
 Mesh::Mesh(std::vector<Vertex> vertices, std::vector<uint32_t> indices, ComPtr<ID3D12Device5> new_device)
 {

@@ -18,6 +18,7 @@ struct Attributes {
 struct SphereAttributes {
 	//float3 normal; // Surface normal at intersection
 	float2 uv;     // Texture coordinates
+	float3 normal;
 };
 
 #define RANDOM_IA 16807

@@ -4,6 +4,8 @@
 #include <DirectXMath.h>
 #include "ObjectStructs.h"
 #include "RootSignatureBuilder.h"
+#include <variant>
+#include <variant>
 #include <vector>
 
 using Microsoft::WRL::ComPtr;
@@ -13,6 +15,12 @@ struct Instance
 	XMMATRIX transform;
 	XMMATRIX invTransform;
 };
+
+struct SphereInfo
+{
+	float radius;
+};
+
 
 // Make sure to use correct alignment! In this case (maybe also in general) we had to make sure that the accumulated sizes add up to a multiple of 16.
 // Otherwise the access in the shader will not be correct.
@@ -38,18 +46,20 @@ protected:
 	D3D12_RAYTRACING_GEOMETRY_DESC m_geometryDescription = {};
 	virtual void setGeometryDescription() {};
 	std::vector<Instance> m_instances;
-	
+	virtual void addDerivedInstance() {};
 
 public:
 	static UINT totalInstanceCount;
 	static ComPtr<ID3D12Resource> m_materialBuffer;
+	using GeometryVariant = std::variant<SphereInfo>;
+	static std::vector<GeometryVariant> geometries;
 
 	D3D12_RAYTRACING_GEOMETRY_DESC getGeometryDescription() { return m_geometryDescription; };
 	AccelerationStructureBuffers asBuffers;
 	D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAGS buildFlags;
 
-	void addInstance(Material material);
-	void addInstance(XMMATRIX transformation, Material material);
+	virtual void addInstance(Material material);
+	virtual void addInstance(XMMATRIX transformation, Material material);
 	void transformInstance(XMMATRIX transformation, UINT index);
 	void setTransformInstance(XMMATRIX transformation, UINT index);
 	void translateInstance(float OffsetX, float OffsetY, float OffsetZ, UINT index);
