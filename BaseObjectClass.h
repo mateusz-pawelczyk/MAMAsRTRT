@@ -28,12 +28,13 @@ struct alignas(16)  Material {
 	XMVECTOR diffuseColor;
 	XMVECTOR specularColor;
 	XMVECTOR emissiveColor;
-	float specularPower;
-	float emissiveness;
-	float reflectivity;
+	float emissiveness;		// how diffuse
+	float reflectivity;		
 	float refractivity;
 	float refractionIndex;
-	float padding[3];		// <---- adding padding for alignment
+	float fuzz;				// metalness
+	float matte;			// how matte 
+	float padding;		// <---- adding padding for alignment
 
 };
 

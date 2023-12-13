@@ -132,17 +132,17 @@ cbuffer CameraParams : register(b0)
 		  payload);
 	  color += payload.colorAndDistance.rgb;
   }
-  
+  color = sqrt(color / samples_per_pixel); // gamma correction
 
   if (cameraMoved == false && frameIndex > 0)
   {
-	  gAccumulatedOutput[launchIndex] += float4(color / samples_per_pixel, 1.f);
+	  gAccumulatedOutput[launchIndex] += float4(color , 1.f);
 
 	  gOutput[launchIndex] = gAccumulatedOutput[launchIndex] / frameIndex;
   }
   else {
-	  gOutput[launchIndex] = float4(color / samples_per_pixel, 1.f);
-	  gAccumulatedOutput[launchIndex] = float4(color / samples_per_pixel, 1.f);//float4(.0f, .0f, .0f, 1.f);
+	  gOutput[launchIndex] = float4(color, 1.f);
+	  gAccumulatedOutput[launchIndex] = float4(color, 1.f);//float4(.0f, .0f, .0f, 1.f);
 
   }
 

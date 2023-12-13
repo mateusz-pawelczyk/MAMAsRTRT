@@ -49,6 +49,10 @@ void D3D12HelloTriangle::OnInit() {
 
   m_camera = new FPSCamera({ 1.5f, 1.5f, 1.5f }, { 0, 0, 0 }, { 0, 1, 0 });
   
+   m_screenWidth = GetSystemMetrics(SM_CXSCREEN);
+   m_screenHeight = GetSystemMetrics(SM_CYSCREEN);
+
+
   m_frameBuffer.cameraMoved = false;
   LoadPipeline();
   LoadAssets();
@@ -163,16 +167,23 @@ void D3D12HelloTriangle::LoadPipeline() {
   swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
   swapChainDesc.SampleDesc.Count = 1;
 
+
+  m_width = m_screenWidth;
+  m_height = m_screenHeight;
   ComPtr<IDXGISwapChain1> swapChain;
   ThrowIfFailed(factory->CreateSwapChainForHwnd(
       m_commandQueue.Get(), // Swap chain needs the queue so that it can force a
                             // flush on it.
       Win32Application::GetHwnd(), &swapChainDesc, nullptr, nullptr,
       &swapChain));
-
-  // This sample does not support fullscreen transitions.
-  ThrowIfFailed(factory->MakeWindowAssociation(Win32Application::GetHwnd(),
-                                               DXGI_MWA_NO_ALT_ENTER));
+  //swapChain->SetFullscreenState(TRUE, nullptr);
+  //swapChain->ResizeBuffers(FrameCount, m_screenWidth, m_screenHeight, DXGI_FORMAT_R8G8B8A8_UNORM, DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH);
+  //SetWindowLongPtr(Win32Application::GetHwnd(), GWL_STYLE, WS_POPUP);
+  //SetWindowPos(Win32Application::GetHwnd(), HWND_TOP, 0, 0, m_screenWidth, m_screenHeight, SWP_NOZORDER | SWP_FRAMECHANGED | SWP_SHOWWINDOW);
+ 
+  //// This sample does not support fullscreen transitions.
+  //ThrowIfFailed(factory->MakeWindowAssociation(Win32Application::GetHwnd(),
+  //                                             DXGI_MWA_NO_ALT_ENTER));
 
   ThrowIfFailed(swapChain.As(&m_swapChain));
   m_frameIndex = m_swapChain->GetCurrentBackBufferIndex();
@@ -470,6 +481,8 @@ void D3D12HelloTriangle::OnRender() {
 void D3D12HelloTriangle::OnDestroy() {
   // Ensure that the GPU is no longer referencing resources that are about to be
   // cleaned up by the destructor.
+	m_swapChain->SetFullscreenState(FALSE, nullptr); // FALSE to exit full-screen
+
   WaitForPreviousFrame();
 
   CloseHandle(m_fenceEvent);
@@ -821,6 +834,7 @@ void D3D12HelloTriangle::CreateTopLevelAS(
                                  updateOnly, m_topLevelASBuffers.pResult.Get());
 }
 
+
 //-----------------------------------------------------------------------------
 //
 // Combine the BLAS and TLAS builds to construct the entire acceleration
@@ -848,7 +862,7 @@ void D3D12HelloTriangle::CreateAccelerationStructures() {
 
   //ProceduralGeometry proceduralSphere(-0.0f, -0.0f, -0.0f, 1.0f, 1.0f, 1.0f, m_device);
   m_sphere = new Sphere( 0.4f, m_device);
-  m_planeMesh = new Plane(XMFLOAT3(-100.f, -2.0f, -100.f), XMFLOAT3(100.f, -2.f, 100.f), m_device);
+  m_planeMesh = new Plane(XMFLOAT3(-10.f, -2.0f, -10.f), XMFLOAT3(10.f, -2.f, 10.f), m_device);
 
 
   BLASBuilder blasBuilder(m_device);
@@ -856,45 +870,43 @@ void D3D12HelloTriangle::CreateAccelerationStructures() {
   blasBuilder.AddGeometry(m_sphere);
   blasBuilder.AddGeometry(m_planeMesh);
   std::vector<ComPtr<ID3D12Resource>> resultBuffers = blasBuilder.BuildBLAS(m_commandList);
-  Material sphere1Mat;
-  sphere1Mat.emissiveness = 0.8;
-  sphere1Mat.diffuseColor = XMVECTOR{ 0.0f, 1.0f, 1.0f, 1.0f };
-  sphere1Mat.specularColor = XMVECTOR{ 0.0f, 0.0f, 1.0f, 1.0f };
-  sphere1Mat.emissiveColor = XMVECTOR{ 0.0f, 0.0f, 1.0f, 1.0f };
-  sphere1Mat.refractivity = 0.8;
-  sphere1Mat.refractionIndex = 0.8;
-  sphere1Mat.reflectivity = 0.8;
-  sphere1Mat.specularPower = 0.8;
-
-  Material sphere2Mat;
-  sphere2Mat.emissiveness = 0.8;
-  sphere2Mat.diffuseColor = XMVECTOR{ 1.0f, 0.0f, 0.0f, 1.0f };
-  sphere2Mat.specularColor = XMVECTOR{ 0.0f, 1.0f, 0.0f, 1.0f };
-  sphere2Mat.emissiveColor = XMVECTOR{ 1.0f, 1.0f, 0.0f, 1.0f };
-  sphere2Mat.refractivity = 0.8;
-  sphere2Mat.refractionIndex = 0.2;
-  sphere2Mat.reflectivity = 0.8;
-  sphere2Mat.specularPower = 0.2;
-
-  Material planeMat;
-  planeMat.emissiveness = 0.8;
-  planeMat.diffuseColor = XMVECTOR{ .2f, 0.7f, 0.1f, 1.0f };
-  planeMat.specularColor = XMVECTOR{ 0.0f, 1.0f, 0.0f, 1.0f };
-  planeMat.emissiveColor = XMVECTOR{ 1.0f, 1.0f, 0.0f, 1.0f };
-  planeMat.refractivity = 0.8;
-  planeMat.refractionIndex = 0.2;
-  planeMat.reflectivity = 0.8;
-  planeMat.specularPower = 0.2;
 
 
 
-  for (int i = 0; i < 100; i++)
+
+  std::vector<Material> materials;
+
+  UINT sphere_instances = 10;
+
+  std::mt19937 gen(rd()); // Seed the generator
+
+  std::uniform_real_distribution<float> distrib(0.0, 1.0);
+
+  for (UINT i = 0; i < sphere_instances + 1; ++i)
   {
-	  m_sphere->addInstance(XMMatrixTranslation(sin(float(i)) * 10.f, 1.0f + sin(float(i))*3.0f , cos(float(i))*10.f), sphere1Mat);
+	  Material material;
+	  material.emissiveness = distrib(gen);
+	  material.diffuseColor = XMVECTOR{ distrib(gen)* distrib(gen), distrib(gen)* distrib(gen), distrib(gen)* distrib(gen), 1.0f };
+	  material.specularColor = XMVECTOR{ distrib(gen), distrib(gen), distrib(gen), 1.0f };
+	  material.emissiveColor = XMVECTOR{ distrib(gen), distrib(gen), distrib(gen), 1.0f };
+	  material.refractivity = i < sphere_instances ? distrib(gen) : 0.0f;
+	  material.refractionIndex = distrib(gen) * 2.0f;
+	  material.reflectivity = distrib(gen);
+	  material.fuzz = distrib(gen);
+	  material.matte = distrib(gen);
+
+	  materials.push_back(material);
+  }
+
+  std::uniform_real_distribution<float> distrib2(-5.0, 5.0);
+
+  for (int i = 0; i < sphere_instances; i++)
+  {
+	  m_sphere->addInstance(XMMatrixTranslation(distrib2(gen), -1.6 , distrib2(gen)), materials[i]);
 	  m_instances.push_back({ m_sphere->asBuffers.pResult,  m_sphere->getInstance(i).transform });
   }
 
-  m_planeMesh->addInstance(XMMatrixIdentity(), planeMat);
+  m_planeMesh->addInstance(XMMatrixIdentity(), materials[sphere_instances]);
   m_instances.push_back({ m_planeMesh->asBuffers.pResult,  m_planeMesh->getInstance(0).transform });
 
 
@@ -1468,7 +1480,7 @@ void D3D12HelloTriangle::UpdateCameraBuffer() {
 
   // Copy the matrix contents
   uint8_t *pData;
-  ThrowIfFailed(m_cameraBuffer->Map(0, nullptr, (void **)&pData));
+	  ThrowIfFailed(m_cameraBuffer->Map(0, nullptr, (void **)&pData));
   memcpy(pData, matrices.data(), m_cameraBufferSize);
   m_cameraBuffer->Unmap(0, nullptr);
 }

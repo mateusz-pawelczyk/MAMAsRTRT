@@ -27,6 +27,9 @@
 #include "Sphere.h"
 #include "ObjectStructs.h"
 #include "FPSCamera.h"
+#include <random>
+
+
 
 
 using namespace DirectX;
@@ -100,6 +103,11 @@ private:
   std::chrono::high_resolution_clock::time_point startTime;
 
   FPSCamera* m_camera;
+
+  int m_screenWidth;
+  int m_screenHeight;
+
+  std::random_device rd; // Obtain a random number from hardware
 
   // Pipeline objects.
   CD3DX12_VIEWPORT m_viewport;
