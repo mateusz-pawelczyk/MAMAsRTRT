@@ -2,9 +2,9 @@
 
 [shader("miss")] void Miss(inout HitInfo payload
                            : SV_RayPayload) {
-  uint2 launchIndex = DispatchRaysIndex().xy;
-  float2 dims = float2(DispatchRaysDimensions().xy);
+  float3 D = normalize(WorldRayDirection());	// Ray Direction
 
-  float ramp = launchIndex.y / dims.y;
-  payload.colorAndDistance = float4(0.0f, 0.2f, 0.7f - 0.3f * ramp, -1.0f);
+  float3 a = 0.5 * (D.y + 1.0);
+
+  payload.colorAndDistance = float4((1.0 - a) * float3(1.0, 1.0, 1.0) + a * float3(0.5, 0.7, 1.0), -1.0f);
 }

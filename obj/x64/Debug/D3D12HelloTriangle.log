@@ -1,31 +1,11 @@
-﻿  BLASBuilder.cpp
+﻿  D3D12HelloTriangle.cpp
 C:\Users\ma2880pa-s\Program\MAMAsRTRT\ObjectStructs.h(12): warning C4305: 'argument': truncation from 'double' to 'float'
-C:\Users\ma2880pa-s\Program\MAMAsRTRT\BaseObjectClass.h(70): warning C4267: 'return': conversion from 'size_t' to 'UINT', possible loss of data
-C:\Users\ma2880pa-s\Program\MAMAsRTRT\BLASBuilder.cpp(127): warning C4267: '=': conversion from 'size_t' to 'UINT', possible loss of data
-C:\Users\ma2880pa-s\Program\MAMAsRTRT\BLASBuilder.cpp(205): warning C4267: '=': conversion from 'size_t' to 'UINT', possible loss of data
-  BaseObjectClass.cpp
-C:\Users\ma2880pa-s\Program\MAMAsRTRT\ObjectStructs.h(12): warning C4305: 'argument': truncation from 'double' to 'float'
-C:\Users\ma2880pa-s\Program\MAMAsRTRT\BaseObjectClass.h(70): warning C4267: 'return': conversion from 'size_t' to 'UINT', possible loss of data
-  D3D12HelloTriangle.cpp
-C:\Users\ma2880pa-s\Program\MAMAsRTRT\ObjectStructs.h(12): warning C4305: 'argument': truncation from 'double' to 'float'
-C:\Users\ma2880pa-s\Program\MAMAsRTRT\BaseObjectClass.h(70): warning C4267: 'return': conversion from 'size_t' to 'UINT', possible loss of data
+C:\Users\ma2880pa-s\Program\MAMAsRTRT\BaseObjectClass.h(85): warning C4267: 'return': conversion from 'size_t' to 'UINT', possible loss of data
 C:\Users\ma2880pa-s\Program\MAMAsRTRT\OBJ_Loader.h(949): warning C4244: 'initializing': conversion from 'double' to 'float', possible loss of data
-  FPSCamera.cpp
-  Mesh.cpp
-C:\Users\ma2880pa-s\Program\MAMAsRTRT\ObjectStructs.h(12): warning C4305: 'argument': truncation from 'double' to 'float'
-C:\Users\ma2880pa-s\Program\MAMAsRTRT\BaseObjectClass.h(70): warning C4267: 'return': conversion from 'size_t' to 'UINT', possible loss of data
-  Plane.cpp
-C:\Users\ma2880pa-s\Program\MAMAsRTRT\ObjectStructs.h(12): warning C4305: 'argument': truncation from 'double' to 'float'
-C:\Users\ma2880pa-s\Program\MAMAsRTRT\BaseObjectClass.h(70): warning C4267: 'return': conversion from 'size_t' to 'UINT', possible loss of data
-  ProceduralGeometry.cpp
-C:\Users\ma2880pa-s\Program\MAMAsRTRT\ObjectStructs.h(12): warning C4305: 'argument': truncation from 'double' to 'float'
-C:\Users\ma2880pa-s\Program\MAMAsRTRT\BaseObjectClass.h(70): warning C4267: 'return': conversion from 'size_t' to 'UINT', possible loss of data
-  RootSignatureBuilder.cpp
-  Sphere.cpp
-C:\Users\ma2880pa-s\Program\MAMAsRTRT\ObjectStructs.h(12): warning C4305: 'argument': truncation from 'double' to 'float'
-C:\Users\ma2880pa-s\Program\MAMAsRTRT\BaseObjectClass.h(70): warning C4267: 'return': conversion from 'size_t' to 'UINT', possible loss of data
-  Generating Code...
-  LINK : bin\x64\Debug\D3D12HelloTriangle.exe not found or not built by the last incremental link; performing full link
+C:\Users\ma2880pa-s\Program\MAMAsRTRT\D3D12HelloTriangle.cpp(896): warning C4838: conversion from 'double' to 'float' requires a narrowing conversion
+C:\Users\ma2880pa-s\Program\MAMAsRTRT\D3D12HelloTriangle.cpp(896): warning C4244: 'initializing': conversion from 'double' to 'float', possible loss of data
+C:\Users\ma2880pa-s\Program\MAMAsRTRT\D3D12HelloTriangle.cpp(896): warning C4305: 'initializing': truncation from 'double' to 'float'
+C:\Users\ma2880pa-s\Program\MAMAsRTRT\D3D12HelloTriangle.cpp(945): warning C4305: '=': truncation from 'double' to 'float'
   D3D12HelloTriangle.vcxproj -> C:\Users\ma2880pa-s\Program\MAMAsRTRT\bin\x64\Debug\D3D12HelloTriangle.exe
   Copy dxcompiler.dll and dxil.dll to target folder
   
@@ -33,7 +13,7 @@ C:\Users\ma2880pa-s\Program\MAMAsRTRT\BaseObjectClass.h(70): warning C4267: 'ret
      ROBOCOPY     ::     Robust File Copy for Windows                              
   -------------------------------------------------------------------------------
   
-    Started : den 13 december 2023 12:50:16
+    Started : den 13 december 2023 17:14:50
      Source : C:\Program Files (x86)\Windows Kits\10\bin\10.0.17763.0\x64\
        Dest : C:\Users\ma2880pa-s\Program\MAMAsRTRT\bin\x64\Debug\
   
@@ -53,5 +33,5 @@ C:\Users\ma2880pa-s\Program\MAMAsRTRT\BaseObjectClass.h(70): warning C4267: 'ret
      Files :         2         0         2         0         0         0
      Bytes :   12.85 m         0   12.85 m         0         0         0
      Times :   0:00:00   0:00:00                       0:00:00   0:00:00
-     Ended : den 13 december 2023 12:50:16
+     Ended : den 13 december 2023 17:14:50
   

@@ -39,6 +39,7 @@ D3D12HelloTriangle::D3D12HelloTriangle(UINT width, UINT height,
       m_rtvDescriptorSize(0) {}
 
 UINT BaseObjectClass::totalInstanceCount = 0;
+std::vector<std::pair<std::wstring, std::wstring>> BaseObjectClass::m_hitGroups;
 
 void D3D12HelloTriangle::OnInit() {
 
@@ -176,14 +177,14 @@ void D3D12HelloTriangle::LoadPipeline() {
                             // flush on it.
       Win32Application::GetHwnd(), &swapChainDesc, nullptr, nullptr,
       &swapChain));
-  //swapChain->SetFullscreenState(TRUE, nullptr);
-  //swapChain->ResizeBuffers(FrameCount, m_screenWidth, m_screenHeight, DXGI_FORMAT_R8G8B8A8_UNORM, DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH);
-  //SetWindowLongPtr(Win32Application::GetHwnd(), GWL_STYLE, WS_POPUP);
-  //SetWindowPos(Win32Application::GetHwnd(), HWND_TOP, 0, 0, m_screenWidth, m_screenHeight, SWP_NOZORDER | SWP_FRAMECHANGED | SWP_SHOWWINDOW);
+  swapChain->SetFullscreenState(TRUE, nullptr);
+  swapChain->ResizeBuffers(FrameCount, m_screenWidth, m_screenHeight, DXGI_FORMAT_R8G8B8A8_UNORM, DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH);
+  SetWindowLongPtr(Win32Application::GetHwnd(), GWL_STYLE, WS_POPUP);
+  SetWindowPos(Win32Application::GetHwnd(), HWND_TOP, 0, 0, m_screenWidth, m_screenHeight, SWP_NOZORDER | SWP_FRAMECHANGED | SWP_SHOWWINDOW);
  
-  //// This sample does not support fullscreen transitions.
-  //ThrowIfFailed(factory->MakeWindowAssociation(Win32Application::GetHwnd(),
-  //                                             DXGI_MWA_NO_ALT_ENTER));
+  // This sample does not support fullscreen transitions.
+  ThrowIfFailed(factory->MakeWindowAssociation(Win32Application::GetHwnd(),
+                                               DXGI_MWA_NO_ALT_ENTER));
 
   ThrowIfFailed(swapChain.As(&m_swapChain));
   m_frameIndex = m_swapChain->GetCurrentBackBufferIndex();
@@ -834,6 +835,7 @@ void D3D12HelloTriangle::CreateTopLevelAS(
                                  updateOnly, m_topLevelASBuffers.pResult.Get());
 }
 
+// Function to generate random numbers
 
 //-----------------------------------------------------------------------------
 //
@@ -862,7 +864,7 @@ void D3D12HelloTriangle::CreateAccelerationStructures() {
 
   //ProceduralGeometry proceduralSphere(-0.0f, -0.0f, -0.0f, 1.0f, 1.0f, 1.0f, m_device);
   m_sphere = new Sphere( 0.4f, m_device);
-  m_planeMesh = new Plane(XMFLOAT3(-10.f, -2.0f, -10.f), XMFLOAT3(10.f, -2.f, 10.f), m_device);
+  m_planeMesh = new Plane(XMFLOAT3(-10.f, 0.0f, -10.f), XMFLOAT3(10.f, 0.f, 10.f), m_device);
 
 
   BLASBuilder blasBuilder(m_device);
@@ -871,126 +873,82 @@ void D3D12HelloTriangle::CreateAccelerationStructures() {
   blasBuilder.AddGeometry(m_planeMesh);
   std::vector<ComPtr<ID3D12Resource>> resultBuffers = blasBuilder.BuildBLAS(m_commandList);
 
+  std::mt19937 gen(rd());
+  std::uniform_real_distribution<float> distribution(0.0, 1.0); // Adjust range as needed
 
 
 
   std::vector<Material> materials;
 
-  UINT sphere_instances = 5;
+  UINT sphere_instances = 2;
 
   // Define materials with a varied and visually appealing palette
 
-  // Sphere 1 - Metallic Gold
-  Material goldSphere;
-  goldSphere.emissiveness = 0.0f;
-  goldSphere.diffuseColor = XMVECTOR{ 1.0f, 0.843f, 0.0f, 1.0f }; // Gold
-  goldSphere.specularColor = XMVECTOR{ 1.0f, 0.843f, 0.0f, 1.0f };
-  goldSphere.emissiveColor = XMVECTOR{ 0.0f, 0.0f, 0.0f, 1.0f };
-  goldSphere.refractivity = 0.0f;
-  goldSphere.refractionIndex = 0.0f;
-  goldSphere.reflectivity = 1.0f; // Highly reflective
-  goldSphere.fuzz = 0.05f; // Sharp reflections
-  goldSphere.matte = 0.0f;
-  materials.push_back(goldSphere);
+  //XMVECTOR attenuation;
+  //float refractionIndex;
+  //float fuzz;				// metalness
+  //float matte;			// how matte 
+  //float padding;
 
-  // Sphere 2 - Glass-like
-  Material glassSphere;
-  glassSphere.emissiveness = 0.0f;
-  glassSphere.diffuseColor = XMVECTOR{ 0.7f, 0.7f, 1.0f, 1.0f }; // Light blue color
-  glassSphere.specularColor = XMVECTOR{ 1.0f, 1.0f, 1.0f, 1.0f }; // Intense specular highlight
-  glassSphere.emissiveColor = XMVECTOR{ 0.0f, 0.0f, 0.0f, 1.0f };
-  glassSphere.refractivity = 0.95f; // High refraction for a glass-like appearance
-  glassSphere.refractionIndex = 1.5f; // Typical for glass
-  glassSphere.reflectivity = 0.1f;
-  glassSphere.fuzz = 0.0f;
-  glassSphere.matte = 0.0f;
-  materials.push_back(glassSphere);
+  for (int a = -4; a < 4; a++) {
+	  for (int b = -4; b < 4; b++) {
+		  auto choose_mat = distribution(gen);
+		  XMVECTOR center{ a * 3.0 + distribution(gen) * 3.0, 0.411, b * 3.0 +  distribution(gen) * 3.0, 1.0f};
 
-  // Sphere 3 - Matte Red
-  Material matteRedSphere;
-  matteRedSphere.emissiveness = 0.0f;
-  matteRedSphere.diffuseColor = XMVECTOR{ 0.9f, 0.2f, 0.2f, 1.0f }; // Red
-  matteRedSphere.specularColor = XMVECTOR{ 0.5f, 0.1f, 0.1f, 1.0f };
-  matteRedSphere.emissiveColor = XMVECTOR{ 0.0f, 0.0f, 0.0f, 1.0f };
-  matteRedSphere.refractivity = 0.0f;
-  matteRedSphere.refractionIndex = 0.0f;
-  matteRedSphere.reflectivity = 0.0f;
-  matteRedSphere.fuzz = 0.0f;
-  matteRedSphere.matte = 1.0f; // Non-reflective, matte surface
-  materials.push_back(matteRedSphere);
+		  if (XMVectorGetX(XMVector3Length(XMVECTOR({ XMVectorGetX(center) - 4.0f, XMVectorGetY(center) - 0.411f, XMVectorGetZ(center), 1.0f }))) > 0.9f) {
 
-  // Sphere 4 - Shiny Blue
-  Material shinyBlueSphere;
-  shinyBlueSphere.emissiveness = 0.0f;
-  shinyBlueSphere.diffuseColor = XMVECTOR{ 0.1f, 0.1f, 0.8f, 1.0f }; // Blue
-  shinyBlueSphere.specularColor = XMVECTOR{ 0.2f, 0.2f, 1.0f, 1.0f };
-  shinyBlueSphere.emissiveColor = XMVECTOR{ 0.0f, 0.0f, 0.0f, 1.0f };
-  shinyBlueSphere.refractivity = 0.0f;
-  shinyBlueSphere.refractionIndex = 0.0f;
-  shinyBlueSphere.reflectivity = 0.5f;
-  shinyBlueSphere.fuzz = 0.0f;
-  shinyBlueSphere.matte = 0.0f;
-  materials.push_back(shinyBlueSphere);
+			  if (choose_mat < 0.8) {
+				  // diffuse
+				  auto albedo = XMVECTOR({ distribution(gen) * distribution(gen) ,distribution(gen) * distribution(gen) ,distribution(gen) * distribution(gen) , 1.0f});
+				  Material goldSphere;
+				  goldSphere.attenuation = albedo; 
+				  goldSphere.refractionIndex = 0.0f;
+				  goldSphere.fuzz = 0.0f;
+				  goldSphere.matte = choose_mat;
+				  m_sphere->addInstance(XMMatrixTranslation(XMVectorGetX(center), XMVectorGetY(center), XMVectorGetZ(center)), goldSphere, L"SphereHitGroupLambertian", L"ShadowSphereHitGroup");
+				  m_instances.push_back({ m_sphere->asBuffers.pResult, m_sphere->getInstance((b+4) + (a+4) * 8).transform });
 
-  // Sphere 5 - Translucent Green
-  Material translucentGreenSphere;
-  translucentGreenSphere.emissiveness = 0.0f;
-  translucentGreenSphere.diffuseColor = XMVECTOR{ 0.1f, 0.9f, 0.1f, 0.5f }; // Green with some transparency
-  translucentGreenSphere.specularColor = XMVECTOR{ 0.2f, 0.9f, 0.2f, 0.5f };
-  translucentGreenSphere.emissiveColor = XMVECTOR{ 0.0f, 0.0f, 0.0f, 0.5f };
-  translucentGreenSphere.refractivity = 0.5f;
-  translucentGreenSphere.refractionIndex = 1.2f;
-  translucentGreenSphere.reflectivity = 0.2f;
-  translucentGreenSphere.fuzz = 0.0f;
-  translucentGreenSphere.matte = 0.0f;
-  materials.push_back(translucentGreenSphere);
+			  }
+			  else if (choose_mat < 0.95) {
+				  std::uniform_real_distribution<float> distribution2(0.5, 1.0); // Adjust range as needed
 
-  //// Sphere 6 - Glass-like
-  //Material glassSphere;
-  //glassSphere.emissiveness = 0.0f;
-  //glassSphere.diffuseColor = XMVECTOR{ 0.0f, 0.0f, 0.0f, 0.0f }; // Light blue color
-  //glassSphere.specularColor = XMVECTOR{ 1.0f, 1.0f, 1.0f, 1.0f }; // Intense specular highlight
-  //glassSphere.emissiveColor = XMVECTOR{ 0.0f, 0.0f, 0.0f, 1.0f };
-  //glassSphere.refractivity = 0.95f; // High refraction for a glass-like appearance
-  //glassSphere.refractionIndex = 1.5f; // Typical for glass
-  //glassSphere.reflectivity = 0.1f;
-  //glassSphere.fuzz = 0.0f;
-  //glassSphere.matte = 0.0f;
-  //materials.push_back(glassSphere);
+				  auto albedo = XMVECTOR({ distribution2(gen)  ,distribution2(gen) ,distribution2(gen)  , 1.0f });
+
+				  auto fuzz = distribution2(gen) -0.5f;
+				  Material goldSphere;
+				  goldSphere.attenuation = albedo;
+				  goldSphere.refractionIndex = 0.0f;
+				  goldSphere.fuzz = fuzz;
+				  goldSphere.matte = choose_mat;
+				  m_sphere->addInstance(XMMatrixTranslation(XMVectorGetX(center), XMVectorGetY(center), XMVectorGetZ(center)), goldSphere, L"SphereHitGroupMetal", L"ShadowSphereHitGroup");
+				  m_instances.push_back({ m_sphere->asBuffers.pResult, m_sphere->getInstance((b + 4) + (a + 4) * 8).transform });
+			  }
+			  else {
+				  Material glassSphere;
+				  glassSphere.attenuation = XMVECTOR{ 1.0f, 0.843f, 0.0f, 1.0f }; 
+				  glassSphere.refractionIndex = 1.5f;
+				  glassSphere.fuzz = 0.0;
+				  glassSphere.matte = 0.98f;
+				  m_sphere->addInstance(XMMatrixTranslation(XMVectorGetX(center), XMVectorGetY(center), XMVectorGetZ(center)), glassSphere, L"SphereHitGroupDielectric", L"ShadowSphereHitGroup");
+				  m_instances.push_back({ m_sphere->asBuffers.pResult, m_sphere->getInstance((b + 4) + (a + 4) * 8).transform });
+			  }
+		  }
+	  }
+  }
+
+  
 
   // Ground Material - Diffuse
   Material groundMaterial;
-  groundMaterial.emissiveness = 0.0f;
-  groundMaterial.diffuseColor = XMVECTOR{ 0.5f, 0.5f, 0.5f, 1.0f }; // Medium gray color
-  groundMaterial.specularColor = XMVECTOR{ 0.1f, 0.1f, 0.1f, 1.0f }; // Low specular highlight
-  groundMaterial.emissiveColor = XMVECTOR{ 0.0f, 0.0f, 0.0f, 1.0f };
-  groundMaterial.refractivity = 0.0f;
-  groundMaterial.refractionIndex = 0.0f;
-  groundMaterial.reflectivity = 0.0f;
-  groundMaterial.fuzz = 0.0f;
-  groundMaterial.matte = 1.0f; // Non-reflective, matte surface
-  materials.push_back(groundMaterial);
+  groundMaterial.attenuation = XMVECTOR{ 0.5f, 0.5f, 0.5f, 1.0f }; // Gold
+  groundMaterial.refractionIndex = 1.5f;
+  groundMaterial.fuzz = 0.1;
+  groundMaterial.matte = 0.1f;
 
 
-  // Sphere Instances Placement
- // Arrange the spheres in a visually pleasing manner
-  m_sphere->addInstance(XMMatrixTranslation(-2.0f, 0.0f, 0.0f), materials[0]);
-  m_instances.push_back({ m_sphere->asBuffers.pResult, m_sphere->getInstance(0).transform });
-
-  m_sphere->addInstance(XMMatrixTranslation(2.0f, 0.0f, 0.0f), materials[1]);
-  m_instances.push_back({ m_sphere->asBuffers.pResult, m_sphere->getInstance(1).transform });
-
-  m_sphere->addInstance(XMMatrixTranslation(-1.0f, -1.59f, 1.0f), materials[2]);
-  m_instances.push_back({ m_sphere->asBuffers.pResult, m_sphere->getInstance(2).transform });
-
-  m_sphere->addInstance(XMMatrixTranslation(1.0f, -1.59f, 1.0f), materials[3]);
-  m_instances.push_back({ m_sphere->asBuffers.pResult, m_sphere->getInstance(3).transform });
-
-  m_sphere->addInstance(XMMatrixTranslation(0.0f, -1.2f, -1.0f), materials[4]);
-  m_instances.push_back({ m_sphere->asBuffers.pResult, m_sphere->getInstance(4).transform });
-
+  
   // Plane Instance
-  m_planeMesh->addInstance(XMMatrixIdentity(), materials[5]);
+  m_planeMesh->addInstance(XMMatrixIdentity(), groundMaterial, L"ClosestHit", L"ShadowHitGroup");
   m_instances.push_back({ m_planeMesh->asBuffers.pResult, m_planeMesh->getInstance(0).transform });
 
 
@@ -1157,7 +1115,7 @@ void D3D12HelloTriangle::CreateRaytracingPipeline() {
   // #DXR Extra: Per-Instance Data
   pipeline.AddLibrary(m_hitLibrary.Get(), {L"ClosestHit", L"PlaneClosestHit"});
 
-  pipeline.AddLibrary(m_sphereHitLibrary.Get(), { L"SphereClosestHit"});
+  pipeline.AddLibrary(m_sphereHitLibrary.Get(), { L"SphereClosestHitLambertian", L"SphereClosestHitMetal", L"SphereClosestHitDielectric" });
   pipeline.AddLibrary(m_sphereIntersectionLibrary.Get(), { L"SphereIntersection"});
 
   // To be used, each DX12 shader needs a root signature defining which
@@ -1193,7 +1151,9 @@ void D3D12HelloTriangle::CreateRaytracingPipeline() {
 
   pipeline.AddHitGroup(L"ShadowSphereHitGroup", L"ShadowSphereClosestHit", L"", L"SphereIntersection", D3D12_HIT_GROUP_TYPE_PROCEDURAL_PRIMITIVE);
 
-  pipeline.AddHitGroup(L"SphereHitGroup",  L"SphereClosestHit",  L"", L"SphereIntersection", D3D12_HIT_GROUP_TYPE_PROCEDURAL_PRIMITIVE);
+  pipeline.AddHitGroup(L"SphereHitGroupLambertian",  L"SphereClosestHitLambertian",  L"", L"SphereIntersection", D3D12_HIT_GROUP_TYPE_PROCEDURAL_PRIMITIVE);
+  pipeline.AddHitGroup(L"SphereHitGroupMetal",  L"SphereClosestHitMetal",  L"", L"SphereIntersection", D3D12_HIT_GROUP_TYPE_PROCEDURAL_PRIMITIVE);
+  pipeline.AddHitGroup(L"SphereHitGroupDielectric",  L"SphereClosestHitDielectric",  L"", L"SphereIntersection", D3D12_HIT_GROUP_TYPE_PROCEDURAL_PRIMITIVE);
 
   // The following section associates the root signature to each shader. Note
   // that we can explicitly show that some shaders share the same root signature
@@ -1211,7 +1171,9 @@ void D3D12HelloTriangle::CreateRaytracingPipeline() {
   pipeline.AddRootSignatureAssociation(m_shadowSphereSignature.Get(),
 	  { L"ShadowSphereHitGroup" });
 
-  pipeline.AddRootSignatureAssociation(m_sphereHitGroupSignature.Get(), { L"SphereHitGroup" });
+  pipeline.AddRootSignatureAssociation(m_sphereHitGroupSignature.Get(), { L"SphereHitGroupLambertian" });
+  pipeline.AddRootSignatureAssociation(m_sphereHitGroupSignature.Get(), { L"SphereHitGroupMetal" });
+  pipeline.AddRootSignatureAssociation(m_sphereHitGroupSignature.Get(), { L"SphereHitGroupDielectric" });
 
   // #DXR Extra - Another ray type
   pipeline.AddRootSignatureAssociation(m_missSignature.Get(),
@@ -1439,11 +1401,11 @@ void D3D12HelloTriangle::CreateShaderBindingTable() {
   for (UINT i = 0; i < m_sphere->getSphereInstanceCount(); ++i)
   {
 	  m_sbtHelper.AddHitGroup(
-		  L"SphereHitGroup",
+		  BaseObjectClass::m_hitGroups[i].first,
 		  { (void*)(m_sphere->getInstanceBuffer(i)->GetGPUVirtualAddress())
 					  });
 	  // #DXR Extra - Another ray type
-	  m_sbtHelper.AddHitGroup(L"ShadowSphereHitGroup", { (void*)(m_sphere->getInstanceBuffer(i)->GetGPUVirtualAddress()) });
+	  m_sbtHelper.AddHitGroup(BaseObjectClass::m_hitGroups[i].second, { (void*)(m_sphere->getInstanceBuffer(i)->GetGPUVirtualAddress()) });
   }
 
   for (UINT i = 0; i < m_planeMesh->getPlaneInstanceCount(); ++i)

@@ -41,17 +41,13 @@ cbuffer SceneConstantBuffer : register(b1, space1) {
 	float  elapsedTime;
 }
 
-struct Material {
-	float4 diffuseColor;
-	float4 specularColor;
-	float4 emissiveColor;
-	float emissiveness;		// how diffuse
-	float reflectivity;
-	float refractivity;
+
+struct  Material {
+	float4 albedo;
 	float refractionIndex;
 	float fuzz;				// metalness
 	float matte;			// how matte 
-	float padding[2];		// <---- adding padding for alignment
+	float padding;			// <---- adding padding for alignment
 };
 
 StructuredBuffer<Material> g_Materials : register(t3);
@@ -132,261 +128,261 @@ float3 HitAttribute(float3 vertexAttribute[3], BuiltInTriangleIntersectionAttrib
                                        Attributes attrib) {
 	if (payload.depth == 0)
 	{
-		payload.colorAndDistance = float4(0,0,0, RayTCurrent());
+		payload.colorAndDistance = float4(0,0,1.0f, RayTCurrent());
 		return;
 	}
-	float3 barycentrics =
-		float3(1.f - attrib.bary.x - attrib.bary.y, attrib.bary.x, attrib.bary.y);
+	//float3 barycentrics =
+	//	float3(1.f - attrib.bary.x - attrib.bary.y, attrib.bary.x, attrib.bary.y);
 
-	uint vertId = 3 * PrimitiveIndex();
+	//uint vertId = 3 * PrimitiveIndex();
 
-	// Retrieve corresponding vertex normals for the triangle vertices.
-	float3 vertexNormals[3] = {
-		BTriVertex[indices[vertId + 0]].normal,
-		BTriVertex[indices[vertId + 1]].normal,
-		BTriVertex[indices[vertId + 2]].normal
-	};
-
-
-	float3 hitNormal = HitAttribute(vertexNormals, attrib);
-
-	
-	
-	// #DXR Extra: Per-Instance Data
-	// interpolating the color between vertices because each vertex has a colorn assigned in STriVertex.
-	float3 hitColor = BTriVertex[indices[vertId + 0]].color * barycentrics.x +
-		BTriVertex[indices[vertId + 1]].color * barycentrics.y +
-		 barycentrics.z ;
-	
-
-	// Calculate final color.
-	//float4 phongColor = CalculatePhongLighting(float4(0.3, 0.6, 0.1, 1.0f), hitNormal, diffuseCoef, specularCoef, specularPower);
-
-	 float3 D = normalize(WorldRayDirection());
-	 float3 N = normalize(hitNormal);
+	//// Retrieve corresponding vertex normals for the triangle vertices.
+	//float3 vertexNormals[3] = {
+	//	BTriVertex[indices[vertId + 0]].normal,
+	//	BTriVertex[indices[vertId + 1]].normal,
+	//	BTriVertex[indices[vertId + 2]].normal
+	//};
 
 
-	 uint seed = GenerateSeed(DispatchRaysIndex().x + DispatchRaysIndex().y * DispatchRaysDimensions().x, elapsedTime, payload.colorAndDistance.w);
-	 
+	//float3 hitNormal = HitAttribute(vertexNormals, attrib);
 
-	 float3 reflectedDirecion = random_on_hemisphere(N, seed);
+	//
+	//
+	//// #DXR Extra: Per-Instance Data
+	//// interpolating the color between vertices because each vertex has a colorn assigned in STriVertex.
+	//float3 hitColor = BTriVertex[indices[vertId + 0]].color * barycentrics.x +
+	//	BTriVertex[indices[vertId + 1]].color * barycentrics.y +
+	//	 barycentrics.z ;
+	//
 
+	//// Calculate final color.
+	////float4 phongColor = CalculatePhongLighting(float4(0.3, 0.6, 0.1, 1.0f), hitNormal, diffuseCoef, specularCoef, specularPower);
 
-	// reflection
-	RayDesc ray;
-	ray.Origin = HitWorldPosition();
-	ray.Direction = normalize(reflectedDirecion);//reflect(D, N));
-	ray.TMin = 0.01;
-	ray.TMax = 100000;
-
-	// Initialize the ray payload
-	HitInfo diffusePayload;
-	diffusePayload.colorAndDistance = float4(0, 0, 0, 0);
-	diffusePayload.depth = payload.depth - 1;
-
-	
-
-	// Trace the ray
-	TraceRay(
-		// Parameter name: AccelerationStructure
-		// Acceleration structure
-		SceneBVH,
-
-		// Parameter name: RayFlags
-		// Flags can be used to specify the behavior upon hitting a surface
-		RAY_FLAG_NONE,
-
-		// Parameter name: InstanceInclusionMask
-		// Instance inclusion mask, which can be used to mask out some geometry to
-		// this ray by and-ing the mask with a geometry mask. The 0xFF flag then
-		// indicates no geometry will be masked
-		0xFF,
-
-		// Parameter name: RayContributionToHitGroupIndex
-		// Depending on the type of ray, a given object can have several hit
-		// groups attached (ie. what to do when hitting to compute regular
-		// shading, and what to do when hitting to compute shadows). Those hit
-		// groups are specified sequentially in the SBT, so the value below
-		// indicates which offset (on 4 bits) to apply to the hit groups for this
-		// ray. In this sample we only have one hit group per object, hence an
-		// offset of 0.
-		0,
-
-		// Parameter name: MultiplierForGeometryContributionToHitGroupIndex
-		// The offsets in the SBT can be computed from the object ID, its instance
-		// ID, but also simply by the order the objects have been pushed in the
-		// acceleration structure. This allows the application to group shaders in
-		// the SBT in the same order as they are added in the AS, in which case
-		// the value below represents the stride (4 bits representing the number
-		// of hit groups) between two consecutive objects.
-		0,
-
-		// Parameter name: MissShaderIndex
-		// Index of the miss shader to use in case several consecutive miss
-		// shaders are present in the SBT. This allows to change the behavior of
-		// the program when no geometry have been hit, for example one to return a
-		// sky color for regular rendering, and another returning a full
-		// visibility value for shadow rays. This sample has only one miss shader,
-		// hence an index 0
-		0,
-
-		// Parameter name: Ray
-		// Ray information to trace
-		ray,
-
-		// Parameter name: Payload
-		// Payload associated to the ray, which will be used to communicate
-		// between the hit/miss shaders and the raygen
-		diffusePayload);
-
-	// reflection
-	RayDesc rayReflect;
-	rayReflect.Origin = HitWorldPosition();
-	rayReflect.Direction = reflect(D, N);
-	rayReflect.TMin = 0.01;
-	rayReflect.TMax = 100000;
-
-	// Initialize the ray payload
-	HitInfo reflectionPayload;
-	reflectionPayload.colorAndDistance = float4(0, 0, 0, 0);
-	reflectionPayload.depth = payload.depth - 1;
+	// float3 D = normalize(WorldRayDirection());
+	// float3 N = normalize(hitNormal);
 
 
+	// uint seed = GenerateSeed(DispatchRaysIndex().x + DispatchRaysIndex().y * DispatchRaysDimensions().x, elapsedTime, payload.colorAndDistance.w);
+	// 
 
-	// Trace the ray
-	TraceRay(
-		// Parameter name: AccelerationStructure
-		// Acceleration structure
-		SceneBVH,
+	// float3 reflectedDirecion = random_on_hemisphere(N, seed);
 
-		// Parameter name: RayFlags
-		// Flags can be used to specify the behavior upon hitting a surface
-		RAY_FLAG_NONE,
 
-		// Parameter name: InstanceInclusionMask
-		// Instance inclusion mask, which can be used to mask out some geometry to
-		// this ray by and-ing the mask with a geometry mask. The 0xFF flag then
-		// indicates no geometry will be masked
-		0xFF,
+	//// reflection
+	//RayDesc ray;
+	//ray.Origin = HitWorldPosition();
+	//ray.Direction = normalize(reflectedDirecion);//reflect(D, N));
+	//ray.TMin = 0.01;
+	//ray.TMax = 100000;
 
-		// Parameter name: RayContributionToHitGroupIndex
-		// Depending on the type of ray, a given object can have several hit
-		// groups attached (ie. what to do when hitting to compute regular
-		// shading, and what to do when hitting to compute shadows). Those hit
-		// groups are specified sequentially in the SBT, so the value below
-		// indicates which offset (on 4 bits) to apply to the hit groups for this
-		// ray. In this sample we only have one hit group per object, hence an
-		// offset of 0.
-		0,
+	//// Initialize the ray payload
+	//HitInfo diffusePayload;
+	//diffusePayload.colorAndDistance = float4(0, 0, 0, 0);
+	//diffusePayload.depth = payload.depth - 1;
 
-		// Parameter name: MultiplierForGeometryContributionToHitGroupIndex
-		// The offsets in the SBT can be computed from the object ID, its instance
-		// ID, but also simply by the order the objects have been pushed in the
-		// acceleration structure. This allows the application to group shaders in
-		// the SBT in the same order as they are added in the AS, in which case
-		// the value below represents the stride (4 bits representing the number
-		// of hit groups) between two consecutive objects.
-		0,
+	//
 
-		// Parameter name: MissShaderIndex
-		// Index of the miss shader to use in case several consecutive miss
-		// shaders are present in the SBT. This allows to change the behavior of
-		// the program when no geometry have been hit, for example one to return a
-		// sky color for regular rendering, and another returning a full
-		// visibility value for shadow rays. This sample has only one miss shader,
-		// hence an index 0
-		0,
+	//// Trace the ray
+	//TraceRay(
+	//	// Parameter name: AccelerationStructure
+	//	// Acceleration structure
+	//	SceneBVH,
 
-		// Parameter name: Ray
-		// Ray information to trace
-		rayReflect,
+	//	// Parameter name: RayFlags
+	//	// Flags can be used to specify the behavior upon hitting a surface
+	//	RAY_FLAG_NONE,
 
-		// Parameter name: Payload
-		// Payload associated to the ray, which will be used to communicate
-		// between the hit/miss shaders and the raygen
-		reflectionPayload);
+	//	// Parameter name: InstanceInclusionMask
+	//	// Instance inclusion mask, which can be used to mask out some geometry to
+	//	// this ray by and-ing the mask with a geometry mask. The 0xFF flag then
+	//	// indicates no geometry will be masked
+	//	0xFF,
+
+	//	// Parameter name: RayContributionToHitGroupIndex
+	//	// Depending on the type of ray, a given object can have several hit
+	//	// groups attached (ie. what to do when hitting to compute regular
+	//	// shading, and what to do when hitting to compute shadows). Those hit
+	//	// groups are specified sequentially in the SBT, so the value below
+	//	// indicates which offset (on 4 bits) to apply to the hit groups for this
+	//	// ray. In this sample we only have one hit group per object, hence an
+	//	// offset of 0.
+	//	0,
+
+	//	// Parameter name: MultiplierForGeometryContributionToHitGroupIndex
+	//	// The offsets in the SBT can be computed from the object ID, its instance
+	//	// ID, but also simply by the order the objects have been pushed in the
+	//	// acceleration structure. This allows the application to group shaders in
+	//	// the SBT in the same order as they are added in the AS, in which case
+	//	// the value below represents the stride (4 bits representing the number
+	//	// of hit groups) between two consecutive objects.
+	//	0,
+
+	//	// Parameter name: MissShaderIndex
+	//	// Index of the miss shader to use in case several consecutive miss
+	//	// shaders are present in the SBT. This allows to change the behavior of
+	//	// the program when no geometry have been hit, for example one to return a
+	//	// sky color for regular rendering, and another returning a full
+	//	// visibility value for shadow rays. This sample has only one miss shader,
+	//	// hence an index 0
+	//	0,
+
+	//	// Parameter name: Ray
+	//	// Ray information to trace
+	//	ray,
+
+	//	// Parameter name: Payload
+	//	// Payload associated to the ray, which will be used to communicate
+	//	// between the hit/miss shaders and the raygen
+	//	diffusePayload);
+
+	//// reflection
+	//RayDesc rayReflect;
+	//rayReflect.Origin = HitWorldPosition();
+	//rayReflect.Direction = reflect(D, N);
+	//rayReflect.TMin = 0.01;
+	//rayReflect.TMax = 100000;
+
+	//// Initialize the ray payload
+	//HitInfo reflectionPayload;
+	//reflectionPayload.colorAndDistance = float4(0, 0, 0, 0);
+	//reflectionPayload.depth = payload.depth - 1;
 
 
 
-	float eta = 1.0f / 1.3;
-	if (dot(N, D) > 0) {
-		eta = 1.0f / eta;
-		N = -N;
-	}
+	//// Trace the ray
+	//TraceRay(
+	//	// Parameter name: AccelerationStructure
+	//	// Acceleration structure
+	//	SceneBVH,
 
-	float r = dot(-D, N);
-	float c = 1.0f - eta * eta * (1 - r * r);
-	float3 R = eta * D + (eta * r - sqrt(c)) * N;
+	//	// Parameter name: RayFlags
+	//	// Flags can be used to specify the behavior upon hitting a surface
+	//	RAY_FLAG_NONE,
 
-	// refraction
-	RayDesc rayRefract;
-	rayRefract.Origin = HitWorldPosition();
-	rayRefract.Direction = normalize(R);
-	rayRefract.TMin = 0.1;
-	rayRefract.TMax = 100000;
+	//	// Parameter name: InstanceInclusionMask
+	//	// Instance inclusion mask, which can be used to mask out some geometry to
+	//	// this ray by and-ing the mask with a geometry mask. The 0xFF flag then
+	//	// indicates no geometry will be masked
+	//	0xFF,
 
-	// Initialize the ray payload
-	HitInfo refractionPayload;
-	refractionPayload.colorAndDistance = float4(0, 0, 0, 0);
-	refractionPayload.depth = payload.depth - 1;
+	//	// Parameter name: RayContributionToHitGroupIndex
+	//	// Depending on the type of ray, a given object can have several hit
+	//	// groups attached (ie. what to do when hitting to compute regular
+	//	// shading, and what to do when hitting to compute shadows). Those hit
+	//	// groups are specified sequentially in the SBT, so the value below
+	//	// indicates which offset (on 4 bits) to apply to the hit groups for this
+	//	// ray. In this sample we only have one hit group per object, hence an
+	//	// offset of 0.
+	//	0,
 
+	//	// Parameter name: MultiplierForGeometryContributionToHitGroupIndex
+	//	// The offsets in the SBT can be computed from the object ID, its instance
+	//	// ID, but also simply by the order the objects have been pushed in the
+	//	// acceleration structure. This allows the application to group shaders in
+	//	// the SBT in the same order as they are added in the AS, in which case
+	//	// the value below represents the stride (4 bits representing the number
+	//	// of hit groups) between two consecutive objects.
+	//	0,
 
-	// Trace the ray
-	TraceRay(
-		// Parameter name: AccelerationStructure
-		// Acceleration structure
-		SceneBVH,
+	//	// Parameter name: MissShaderIndex
+	//	// Index of the miss shader to use in case several consecutive miss
+	//	// shaders are present in the SBT. This allows to change the behavior of
+	//	// the program when no geometry have been hit, for example one to return a
+	//	// sky color for regular rendering, and another returning a full
+	//	// visibility value for shadow rays. This sample has only one miss shader,
+	//	// hence an index 0
+	//	0,
 
-		// Parameter name: RayFlags
-		// Flags can be used to specify the behavior upon hitting a surface
-		RAY_FLAG_NONE,
+	//	// Parameter name: Ray
+	//	// Ray information to trace
+	//	rayReflect,
 
-		// Parameter name: InstanceInclusionMask
-		// Instance inclusion mask, which can be used to mask out some geometry to
-		// this ray by and-ing the mask with a geometry mask. The 0xFF flag then
-		// indicates no geometry will be masked
-		0xFF,
-
-		// Parameter name: RayContributionToHitGroupIndex
-		// Depending on the type of ray, a given object can have several hit
-		// groups attached (ie. what to do when hitting to compute regular
-		// shading, and what to do when hitting to compute shadows). Those hit
-		// groups are specified sequentially in the SBT, so the value below
-		// indicates which offset (on 4 bits) to apply to the hit groups for this
-		// ray. In this sample we only have one hit group per object, hence an
-		// offset of 0.
-		0,
-
-		// Parameter name: MultiplierForGeometryContributionToHitGroupIndex
-		// The offsets in the SBT can be computed from the object ID, its instance
-		// ID, but also simply by the order the objects have been pushed in the
-		// acceleration structure. This allows the application to group shaders in
-		// the SBT in the same order as they are added in the AS, in which case
-		// the value below represents the stride (4 bits representing the number
-		// of hit groups) between two consecutive objects.
-		0,
-
-		// Parameter name: MissShaderIndex
-		// Index of the miss shader to use in case several consecutive miss
-		// shaders are present in the SBT. This allows to change the behavior of
-		// the program when no geometry have been hit, for example one to return a
-		// sky color for regular rendering, and another returning a full
-		// visibility value for shadow rays. This sample has only one miss shader,
-		// hence an index 0
-		0,
-
-		// Parameter name: Ray
-		// Ray information to trace
-		rayRefract,
-
-		// Parameter name: Payload
-		// Payload associated to the ray, which will be used to communicate
-		// between the hit/miss shaders and the raygen
-		refractionPayload);
+	//	// Parameter name: Payload
+	//	// Payload associated to the ray, which will be used to communicate
+	//	// between the hit/miss shaders and the raygen
+	//	reflectionPayload);
 
 
 
-		payload.colorAndDistance = float4(1.0 * diffusePayload.colorAndDistance.xyz + 0.0 * float3(0.f, 0.4f, 0.f) + 0.0 * reflectionPayload.colorAndDistance.xyz + 0.0 * refractionPayload.colorAndDistance.xyz, RayTCurrent());;
+	//float eta = 1.0f / 1.3;
+	//if (dot(N, D) > 0) {
+	//	eta = 1.0f / eta;
+	//	N = -N;
+	//}
+
+	//float r = dot(-D, N);
+	//float c = 1.0f - eta * eta * (1 - r * r);
+	//float3 R = eta * D + (eta * r - sqrt(c)) * N;
+
+	//// refraction
+	//RayDesc rayRefract;
+	//rayRefract.Origin = HitWorldPosition();
+	//rayRefract.Direction = normalize(R);
+	//rayRefract.TMin = 0.1;
+	//rayRefract.TMax = 100000;
+
+	//// Initialize the ray payload
+	//HitInfo refractionPayload;
+	//refractionPayload.colorAndDistance = float4(0, 0, 0, 0);
+	//refractionPayload.depth = payload.depth - 1;
+
+
+	//// Trace the ray
+	//TraceRay(
+	//	// Parameter name: AccelerationStructure
+	//	// Acceleration structure
+	//	SceneBVH,
+
+	//	// Parameter name: RayFlags
+	//	// Flags can be used to specify the behavior upon hitting a surface
+	//	RAY_FLAG_NONE,
+
+	//	// Parameter name: InstanceInclusionMask
+	//	// Instance inclusion mask, which can be used to mask out some geometry to
+	//	// this ray by and-ing the mask with a geometry mask. The 0xFF flag then
+	//	// indicates no geometry will be masked
+	//	0xFF,
+
+	//	// Parameter name: RayContributionToHitGroupIndex
+	//	// Depending on the type of ray, a given object can have several hit
+	//	// groups attached (ie. what to do when hitting to compute regular
+	//	// shading, and what to do when hitting to compute shadows). Those hit
+	//	// groups are specified sequentially in the SBT, so the value below
+	//	// indicates which offset (on 4 bits) to apply to the hit groups for this
+	//	// ray. In this sample we only have one hit group per object, hence an
+	//	// offset of 0.
+	//	0,
+
+	//	// Parameter name: MultiplierForGeometryContributionToHitGroupIndex
+	//	// The offsets in the SBT can be computed from the object ID, its instance
+	//	// ID, but also simply by the order the objects have been pushed in the
+	//	// acceleration structure. This allows the application to group shaders in
+	//	// the SBT in the same order as they are added in the AS, in which case
+	//	// the value below represents the stride (4 bits representing the number
+	//	// of hit groups) between two consecutive objects.
+	//	0,
+
+	//	// Parameter name: MissShaderIndex
+	//	// Index of the miss shader to use in case several consecutive miss
+	//	// shaders are present in the SBT. This allows to change the behavior of
+	//	// the program when no geometry have been hit, for example one to return a
+	//	// sky color for regular rendering, and another returning a full
+	//	// visibility value for shadow rays. This sample has only one miss shader,
+	//	// hence an index 0
+	//	0,
+
+	//	// Parameter name: Ray
+	//	// Ray information to trace
+	//	rayRefract,
+
+	//	// Parameter name: Payload
+	//	// Payload associated to the ray, which will be used to communicate
+	//	// between the hit/miss shaders and the raygen
+	//	refractionPayload);
+
+
+
+		payload.colorAndDistance = float4(0.0, 0.0, 1.0, RayTCurrent());;
 
 	
 	//payload.colorAndDistance = float4(reflectiveness * reflectionPayload.colorAndDistance.xyz + refractiveness * refractionPayload.colorAndDistance.xyz +(1-reflectiveness-refractiveness) * phongColor.xyz, RayTCurrent());;
@@ -394,111 +390,44 @@ float3 HitAttribute(float3 vertexAttribute[3], BuiltInTriangleIntersectionAttrib
 
 // #DXR Extra - Another ray type
 [shader("closesthit")] void PlaneClosestHit(inout HitInfo payload, Attributes attrib) {
-	// Early exit for max depth
 	if (payload.depth == 0) {
 		payload.colorAndDistance = float4(0.0f, 0.0f, 0.0f, RayTCurrent());
 		return;
 	}
 
+	
+
 	float3 cameraPos = GetCameraPositionFromViewMatrix(viewI);
-	float3 rayDirection = normalize(WorldRayDirection());
-	float3 normal = float3(0.0f, 1.0f, 0.0f); // Upward normal for plane
-	Material material = g_Materials[InstanceID()];
-	uint seed = GenerateSeed(DispatchRaysIndex().xy, elapsedTime, payload.colorAndDistance.w);
 	float3 hitPosition = HitWorldPosition();
 
 	RayDesc ray;
-	ray.Origin = hitPosition; // Offset to prevent self-intersection
+	ray.Origin = hitPosition;
 	ray.TMin = 0.01;
 	ray.TMax = 100000;
 
-	float3 accumulatedColor = float3(0, 0, 0);
+	float3 D = normalize(WorldRayDirection());	// Ray Direction
+	float3 L = hitPosition - lightPosition;		// Light Direction
+	float3 N = float3(0.0f, 1.0f, 0.0f);		// Normal
+	Material material = g_Materials[InstanceID()];	// Material properties
 
-	// Diffuse Reflection for Ground Surface
-	if (material.matte > 0.0) {
-		seed = GenerateSeed(float2(seed, material.matte), elapsedTime, payload.colorAndDistance.w);
-		float3 scatterDir = random_on_hemisphere(normal, seed);
-		ray.Direction = scatterDir;
-		HitInfo diffusePayload;
-		diffusePayload.colorAndDistance = float4(0, 0, 0, 0);
-		diffusePayload.depth = payload.depth - 1;
-		TraceRay(SceneBVH, RAY_FLAG_NONE, 0xFF, 0, 0, 0, ray, diffusePayload);
-		accumulatedColor += diffusePayload.colorAndDistance.rgb * material.diffuseColor.rgb;
-	}
-	else {
-		// For non-matte surfaces, use the diffuse color directly
-		accumulatedColor += material.diffuseColor.rgb;
-	}
+	uint seed = GenerateSeed(DispatchRaysIndex().xy, elapsedTime, payload.colorAndDistance.w);	// Seed to generate random numbers
 
-	// Specular Reflection (Metallic Surface)
-	if (material.fuzz > 0.0) {
-		seed = GenerateSeed(float2(elapsedTime, seed), elapsedTime, payload.colorAndDistance.w);
-		float3 scatterDir = reflect(rayDirection, normal) + random_on_hemisphere(normal, seed) * material.fuzz;
-		ray.Direction = scatterDir;
-		HitInfo metalPayload;
-		metalPayload.colorAndDistance = float4(0, 0, 0, 0);
-		metalPayload.depth = payload.depth - 1;
-		TraceRay(SceneBVH, RAY_FLAG_NONE, 0xFF, 0, 0, 0, ray, metalPayload);
-		accumulatedColor += metalPayload.colorAndDistance.rgb * material.specularColor.rgb;
+
+	float3 albedo = material.albedo.rgb;
+	float3 scatter_direction = N + random_unit_vector(seed);
+
+	// Catch degenerate scatter direction
+	if (near_zero(scatter_direction))
+	{
+		scatter_direction = N;
 	}
 
+	ray.Direction = scatter_direction;
 
+	HitInfo scatteredPayload;
+	scatteredPayload.colorAndDistance = float4(0, 0, 0, 0);
+	scatteredPayload.depth = payload.depth - 1;
+	TraceRay(SceneBVH, RAY_FLAG_NONE, 0xFF, 0, 0, 0, ray, scatteredPayload);
 
-		// Find the world - space hit position
-	float3 worldOrigin = WorldRayOrigin() + RayTCurrent() * WorldRayDirection();
-
-	float3 lightDir = normalize(lightPosition - worldOrigin);
-
-	// Fire a shadow ray. The direction is hard-coded here, but can be fetched
-	// from a constant-buffer
-	ray.Origin = worldOrigin;
-	ray.Direction = lightDir;
-	ray.TMin = 0.001;
-	ray.TMax = 100000;
-
-	// Initialize the ray payload
-	ShadowHitInfo shadowPayload;
-	shadowPayload.isHit = false;
-
-	// Trace the ray
-	TraceRay(
-		// Acceleration structure
-		SceneBVH,
-		// Flags can be used to specify the behavior upon hitting a surface
-		RAY_FLAG_NONE,
-		// Instance inclusion mask, which can be used to mask out some geometry to
-		// this ray by and-ing the mask with a geometry mask. The 0xFF flag then
-		// indicates no geometry will be masked
-		0xFF,
-		// Depending on the type of ray, a given object can have several hit
-		// groups attached (ie. what to do when hitting to compute regular
-		// shading, and what to do when hitting to compute shadows). Those hit
-		// groups are specified sequentially in the SBT, so the value below
-		// indicates which offset (on 4 bits) to apply to the hit groups for this
-		// ray. In this sample we only have one hit group per object, hence an
-		// offset of 0.
-		1,
-		// The offsets in the SBT can be computed from the object ID, its instance
-		// ID, but also simply by the order the objects have been pushed in the
-		// acceleration structure. This allows the application to group shaders in
-		// the SBT in the same order as they are added in the AS, in which case
-		// the value below represents the stride (4 bits representing the number
-		// of hit groups) between two consecutive objects.
-		0,
-		// Index of the miss shader to use in case several consecutive miss
-		// shaders are present in the SBT. This allows to change the behavior of
-		// the program when no geometry have been hit, for example one to return a
-		// sky color for regular rendering, and another returning a full
-		// visibility value for shadow rays. This sample has only one miss shader,
-		// hence an index 0
-		1,
-		// Ray information to trace
-		ray,
-		// Payload associated to the ray, which will be used to communicate
-		// between the hit/miss shaders and the raygen
-		shadowPayload);
-
-	float shadowFactor = shadowPayload.isHit ? 0.5 : 1.0f;
-	// Final color calculation
-	payload.colorAndDistance = float4(clamp(accumulatedColor, 0.0f, 1.0f) * shadowFactor, RayTCurrent());
+	payload.colorAndDistance = float4(albedo * scatteredPayload.colorAndDistance.rgb, RayTCurrent());
 }

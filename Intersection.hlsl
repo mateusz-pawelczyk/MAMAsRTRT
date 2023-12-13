@@ -26,7 +26,7 @@ float3 objectRayOrigin()
 	return mul(invTransform, float4(WorldRayOrigin(), 1.0f)).xyz;
 }
 
-float3 objectRaDirection()
+float3 objectRayDirection()
 {
 	return mul(invTransform, float4(WorldRayDirection(), 0.0f)).xyz;
 }
@@ -42,8 +42,8 @@ float3 objectRaDirection()
 	sphere.radius = 0.4f;
 
 	float3 oc = objectRayOrigin();
-	float a = dot(objectRaDirection(), objectRaDirection());
-	float half_b = dot(oc, objectRaDirection());
+	float a = dot(objectRayDirection(), objectRayDirection());
+	float half_b = dot(oc, objectRayDirection());
 	float c = dot(oc, oc) - sphere.radius * sphere.radius;
 	float discriminant = half_b * half_b - a * c;
 
@@ -52,7 +52,7 @@ float3 objectRaDirection()
 		float t = (-half_b - sqrtd) / a; // Only considering the nearest intersection
 
 		if (t >= 0) {
-			float3 P = objectRayOrigin() + t * objectRaDirection();
+			float3 P = objectRayOrigin() + t * objectRayDirection();
 			float3 N = normalize(P - sphere.center); // Normal at the intersection
 
 			// Calculate UV coordinates

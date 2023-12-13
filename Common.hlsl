@@ -142,7 +142,11 @@ float3 random_in_unit_sphere(inout uint seed) {
 	}
 
 	seed = ng.seed;
-	return normalize(p);
+	return p;
+}
+
+float3 random_unit_vector(inout uint seed) {
+	return normalize(random_in_unit_sphere(seed));
 }
 
 float2 random_in_circle_using_angle(inout uint seed) {
@@ -181,6 +185,11 @@ float reflectance(float cosine, float ref_idx) {
 	return r0 + (1 - r0) * pow((1 - cosine), 5);
 }
 
+bool near_zero(float3 e)  {
+	// Return true if the vector is close to zero in all dimensions.
+	float s = 1e-8;
+	return (abs(e.x) < s) && (abs(e.y) < s) && (abs(e.z) < s);
+}
 
 
 
