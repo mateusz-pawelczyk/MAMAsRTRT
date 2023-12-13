@@ -128,6 +128,7 @@
     <ClInclude Include="BaseObjectClass.h" />
     <ClInclude Include="BLASBuilder.h" />
     <ClInclude Include="DXRHelper.h" />
+    <ClInclude Include="FPSCamera.h" />
     <ClInclude Include="manipulator.h" />
     <ClInclude Include="Mesh.h" />
     <ClInclude Include="ObjectStructs.h" />
@@ -151,6 +152,7 @@
   <ItemGroup>
     <ClCompile Include="BaseObjectClass.cpp" />
     <ClCompile Include="BLASBuilder.cpp" />
+    <ClCompile Include="FPSCamera.cpp" />
     <ClCompile Include="manipulator.cpp" />
     <ClCompile Include="Mesh.cpp" />
     <ClCompile Include="nv_helpers_dx12\BottomLevelASGenerator.cpp">

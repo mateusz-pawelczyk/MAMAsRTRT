@@ -28,15 +28,18 @@ cbuffer CameraParams : register(b0)
   // Initialize the ray payload
   HitInfo payload;
   payload.colorAndDistance = float4(0, 0, 0, 0);
-  payload.depth = 2;
+  payload.depth = 4;
   uint2 launchIndex = DispatchRaysIndex().xy;
   float2 dims = float2(DispatchRaysDimensions().xy);
   NumberGenerator ng;
   ng.seed = SetSeed(123456789);
+  float samples_per_pixel = 16.f;
 
+
+  float focusDistance = 3.f;
   // Perspective
   float3 color = float3(0.0f, 0.0f, 0.0f);
-  for (int i = 0; i < 16; ++i)
+  for (int i = 0; i < samples_per_pixel; ++i)
   {
 	  
 
@@ -61,6 +64,16 @@ cbuffer CameraParams : register(b0)
 	  ray.Direction = mul(viewI, float4(target.xyz, 0));
 	  ray.TMin = 0;
 	  ray.TMax = 100000;
+
+
+	  float3 focusPoint = ray.Origin + ray.Direction * focusDistance;
+	  ng.seed = Cycle(ng.seed);
+
+	  float2 lensPoint = random_in_circle_using_angle(ng.seed) * 0.04f;
+	  float3 newOrigin = ray.Origin + float3(lensPoint.x, lensPoint.y, 0);
+	  float3 newDirection = normalize(focusPoint - newOrigin);
+	  ray.Origin = newOrigin;
+	  ray.Direction = newDirection;
 	  
 	  payload.colorAndDistance = float4(0, 0, 0, float(i));
 
@@ -120,7 +133,6 @@ cbuffer CameraParams : register(b0)
 	  color += payload.colorAndDistance.rgb;
   }
   
-  float samples_per_pixel = 16.0f;
 
   if (cameraMoved == false && frameIndex > 0)
   {

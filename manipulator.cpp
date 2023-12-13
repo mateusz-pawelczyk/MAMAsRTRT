@@ -192,7 +192,7 @@ Manipulator::Actions Manipulator::mouseMove(int x, int y, const Inputs& inputs)
     curAction = Dolly;
 
   if (curAction != None)
-    motion(x, y, curAction);
+    motion(x, y, Dolly);
 
   return curAction;
 }

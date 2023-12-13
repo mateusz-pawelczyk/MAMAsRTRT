@@ -24,6 +24,7 @@ public:
   virtual void OnRender() = 0;
   virtual void OnDestroy() = 0;
   virtual void OnButtonDown(UINT32) {}
+  virtual void OnMouseMove(int, int) {}
   virtual void OnMouseMove(UINT8, UINT32) {}
 
   // Samples override the event handlers to handle specific messages.

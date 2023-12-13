@@ -123,20 +123,20 @@ float3 random_in_unit_sphere(inout uint seed) {
 
 	NumberGenerator ng;
 	ng.seed = SetSeed(seed);
-	p.x = GetRandomFloat(ng.seed, 0.f, 1.f);
+	p.x = GetRandomFloat(ng.seed, -1.f, 1.f);
 	ng.seed = SetSeed(ng.seed);
-	p.y = GetRandomFloat(ng.seed, 0.f, 1.f);
+	p.y = GetRandomFloat(ng.seed, -1.f, 1.f);
 	ng.seed = SetSeed(ng.seed);
-	p.z = GetRandomFloat(ng.seed, 0.f, 1.f);
+	p.z = GetRandomFloat(ng.seed, -1.f, 1.f);
 
 
 	while (dot(p, p) >= 1 && iterations < max_iterations) {
 		ng.seed = SetSeed(ng.seed);
-		p.x = GetRandomFloat(ng.seed, 0.f, 1.f);
+		p.x = GetRandomFloat(ng.seed, -1.f, 1.f);
 		ng.seed = SetSeed(ng.seed);
-		p.y = GetRandomFloat(ng.seed, 0.f, 1.f);
+		p.y = GetRandomFloat(ng.seed, -1.f, 1.f);
 		ng.seed = SetSeed(ng.seed);
-		p.z = GetRandomFloat(ng.seed, 0.f, 1.f);
+		p.z = GetRandomFloat(ng.seed, -1.f, 1.f);
 
 		iterations++;
 	}
@@ -144,6 +144,18 @@ float3 random_in_unit_sphere(inout uint seed) {
 	seed = ng.seed;
 	return normalize(p);
 }
+
+float2 random_in_circle_using_angle(inout uint seed) {
+
+	NumberGenerator ng;
+	ng.seed = SetSeed(seed);
+	float angle = GetRandomFloat(ng.seed, 0.f, .1f) * 2.0f * 3.1415926538;
+	float2 pointOnCircle = float2(cos(angle), sin(angle));
+	ng.seed = SetSeed(ng.seed);
+	return pointOnCircle * sqrt(GetRandomFloat(ng.seed, 0.f, 1.f));
+	
+}
+
 
 float3 random_on_hemisphere(float3 normal, inout uint seed) {
 	float3 on_unit_sphere = random_in_unit_sphere(seed);

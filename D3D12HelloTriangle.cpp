@@ -47,6 +47,8 @@ void D3D12HelloTriangle::OnInit() {
       glm::vec3(1.5f, 1.5f, 1.5f), glm::vec3(0, 0, 0), glm::vec3(0, 1, 0));
   startTime = std::chrono::high_resolution_clock::now();
 
+  m_camera = new FPSCamera({ 1.5f, 1.5f, 1.5f }, { 0, 0, 0 }, { 0, 1, 0 });
+  
   m_frameBuffer.cameraMoved = false;
   LoadPipeline();
   LoadAssets();
@@ -423,7 +425,8 @@ void D3D12HelloTriangle::OnUpdate() {
 	auto currentTime = std::chrono::high_resolution_clock::now();
 	float elapsedTime = std::chrono::duration<float, std::chrono::seconds::period>(
 		currentTime - startTime).count();
-
+	m_camera->SetDeltaTime(elapsedTime - m_scene.elapsedTime);
+	m_camera->Update(&m_frameBuffer.frameIndex, &m_frameBuffer.cameraMoved);
 	// Update the SceneConstantBuffer
 	m_scene.elapsedTime = elapsedTime;
 
@@ -683,13 +686,15 @@ void D3D12HelloTriangle::CheckRaytracingSupport() {
 //-----------------------------------------------------------------------------
 //
 //
-void D3D12HelloTriangle::OnKeyUp(UINT8 key) {
-  // Alternate between rasterization and raytracing using the spacebar
-  if (key == VK_SPACE) {
-    m_raster = !m_raster;
-  }
+void D3D12HelloTriangle::OnKeyDown(UINT8 key) {
+	m_frameBuffer.cameraMoved = true;
+	m_frameBuffer.frameIndex = 0;
+	m_camera->OnKeyDown(key);
 }
 
+void D3D12HelloTriangle::OnKeyUp(UINT8 key) {
+	m_camera->OnKeyUp(key);
+}
 
 //-----------------------------------------------------------------------------
 //
@@ -883,9 +888,9 @@ void D3D12HelloTriangle::CreateAccelerationStructures() {
 
 
 
-  for (int i = 0; i < 1000; i++)
+  for (int i = 0; i < 100; i++)
   {
-	  m_sphere->addInstance(XMMatrixTranslation(-500.0f + float(i), 1.0f + sin(float(i)) , -1.0f), sphere1Mat);
+	  m_sphere->addInstance(XMMatrixTranslation(sin(float(i)) * 10.f, 1.0f + sin(float(i))*3.0f , cos(float(i))*10.f), sphere1Mat);
 	  m_instances.push_back({ m_sphere->asBuffers.pResult,  m_sphere->getInstance(i).transform });
   }
 
@@ -1447,7 +1452,8 @@ void D3D12HelloTriangle::UpdateCameraBuffer() {
   // defined to transform world-space vertices into a [0,1]x[0,1]x[0,1] camera
   // space
   const glm::mat4 &mat = nv_helpers_dx12::CameraManip.getMatrix();
-  memcpy(&matrices[0].r->m128_f32[0], glm::value_ptr(mat), 16 * sizeof(float));
+  matrices[0] = m_camera->GetViewMatrix();
+  //memcpy(&matrices[0].r->m128_f32[0], glm::value_ptr(mat), 16 * sizeof(float));
 
   float fovAngleY = 45.0f * XM_PI / 180.0f;
   matrices[1] =
@@ -1518,33 +1524,58 @@ void D3D12HelloTriangle::UpdateFrameIndexConstantBuffer() {
 //
 //
 void D3D12HelloTriangle::OnButtonDown(UINT32 lParam) {
-  nv_helpers_dx12::CameraManip.setMousePosition(-GET_X_LPARAM(lParam),
-                                                -GET_Y_LPARAM(lParam));
+  //nv_helpers_dx12::CameraManip.setMousePosition(-GET_X_LPARAM(lParam),
+  //                                              -GET_Y_LPARAM(lParam));
   m_frameBuffer.cameraMoved = true;
   m_frameBuffer.frameIndex = 0;
 
+
+  m_camera->OnKeyDown(lParam);
 }
 
 //--------------------------------------------------------------------------------------------------
 //
 //
 void D3D12HelloTriangle::OnMouseMove(UINT8 wParam, UINT32 lParam) {
-  using nv_helpers_dx12::Manipulator;
-  Manipulator::Inputs inputs;
-  inputs.lmb = wParam & MK_LBUTTON;
-  inputs.mmb = wParam & MK_MBUTTON;
-  inputs.rmb = wParam & MK_RBUTTON;
-  if (!inputs.lmb && !inputs.rmb && !inputs.mmb)
-    return; // no mouse button pressed
+  //using nv_helpers_dx12::Manipulator;
+  //Manipulator::Inputs inputs;
+  //inputs.lmb = wParam & MK_LBUTTON;
+  //inputs.mmb = wParam & MK_MBUTTON;
+  //inputs.rmb = wParam & MK_RBUTTON;
+
+  //if (!inputs.lmb && !inputs.rmb && !inputs.mmb)
+  //  return; // no mouse button pressed
   m_frameBuffer.cameraMoved = true;
   m_frameBuffer.frameIndex = 0;
 
 
-  inputs.ctrl = GetAsyncKeyState(VK_CONTROL);
-  inputs.shift = GetAsyncKeyState(VK_SHIFT);
-  inputs.alt = GetAsyncKeyState(VK_MENU);
+  //inputs.ctrl = GetAsyncKeyState(VK_CONTROL);
+  //inputs.shift = GetAsyncKeyState(VK_SHIFT);
+  //inputs.alt = GetAsyncKeyState(VK_MENU);
 
-  CameraManip.mouseMove(-GET_X_LPARAM(lParam), -GET_Y_LPARAM(lParam), inputs);
+  //CameraManip.mouseMove(-GET_X_LPARAM(lParam), -GET_Y_LPARAM(lParam), inputs);
+	//m_camera->OnMouseMove(lParam);
+}
+
+void D3D12HelloTriangle::OnMouseMove(int deltaX, int deltaY) {
+  //using nv_helpers_dx12::Manipulator;
+  //Manipulator::Inputs inputs;
+  //inputs.lmb = wParam & MK_LBUTTON;
+  //inputs.mmb = wParam & MK_MBUTTON;
+  //inputs.rmb = wParam & MK_RBUTTON;
+
+  //if (!inputs.lmb && !inputs.rmb && !inputs.mmb)
+  //  return; // no mouse button pressed
+  m_frameBuffer.cameraMoved = true;
+  m_frameBuffer.frameIndex = 0;
+
+
+  //inputs.ctrl = GetAsyncKeyState(VK_CONTROL);
+  //inputs.shift = GetAsyncKeyState(VK_SHIFT);
+  //inputs.alt = GetAsyncKeyState(VK_MENU);
+
+  //CameraManip.mouseMove(-GET_X_LPARAM(lParam), -GET_Y_LPARAM(lParam), inputs);
+	m_camera->OnMouseMove(deltaX, deltaY);
 }
 
 //-----------------------------------------------------------------------------

@@ -26,6 +26,7 @@
 #include "ProceduralGeometry.h"
 #include "Sphere.h"
 #include "ObjectStructs.h"
+#include "FPSCamera.h"
 
 
 using namespace DirectX;
@@ -98,6 +99,7 @@ private:
 
   std::chrono::high_resolution_clock::time_point startTime;
 
+  FPSCamera* m_camera;
 
   // Pipeline objects.
   CD3DX12_VIEWPORT m_viewport;
@@ -130,8 +132,9 @@ private:
 
   void CheckRaytracingSupport();
 
-  virtual void OnKeyUp(UINT8 key);
-  bool m_raster = true;
+  void OnKeyUp(UINT8 key);
+  void OnKeyDown(UINT8 key);
+  bool m_raster = false;
 
   // #DXR
   struct AccelerationStructureBuffers {
@@ -238,6 +241,7 @@ private:
   // #DXR Extra: Perspective Camera++
   void OnButtonDown(UINT32 lParam);
   void OnMouseMove(UINT8 wParam, UINT32 lParam);
+  void OnMouseMove(int, int);
 
   // #DXR Extra: Per-Instance Data
   ComPtr<ID3D12Resource> m_planeBuffer;

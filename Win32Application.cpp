@@ -85,18 +85,17 @@ LRESULT CALLBACK Win32Application::WindowProc(HWND hWnd, UINT message,
 
   case WM_KEYDOWN:
     if (pSample) {
-      pSample->OnKeyDown(static_cast<UINT8>(wParam));
+		pSample->OnKeyDown(static_cast<UINT8>(wParam));
+
     }
     if (static_cast<UINT8>(wParam) == VK_ESCAPE)
       PostQuitMessage(0);
     return 0;
-
   case WM_KEYUP:
     if (pSample) {
       pSample->OnKeyUp(static_cast<UINT8>(wParam));
     }
     return 0;
-
   case WM_PAINT:
     if (pSample) {
       pSample->OnUpdate();
@@ -116,8 +115,30 @@ LRESULT CALLBACK Win32Application::WindowProc(HWND hWnd, UINT message,
     return 0;
   case WM_MOUSEMOVE:
     if (pSample) {
-      pSample->OnMouseMove(static_cast<UINT8>(wParam),
-                           static_cast<UINT32>(lParam));
+      
+	  POINT pt;
+	  RECT clientRect;
+	  ShowCursor(FALSE); // Hides the cursor
+
+	  GetClientRect(hWnd, &clientRect); // Get the client area dimensions
+
+	  pt.x = clientRect.left  +(clientRect.right - clientRect.left) / 2;
+	  pt.y = clientRect.top+ (clientRect.bottom - clientRect.top) / 2;
+
+	  //ScreenToClient(hWnd, &pt);
+	  int xPos = LOWORD(lParam);
+	  int yPos = HIWORD(lParam);
+	  // Calculate the change in position since the last recorded position
+	  int deltaX = xPos - pt.x;
+	  int deltaY = yPos - pt.y;
+
+	  ClientToScreen(hWnd, &pt);
+	  SetCursorPos(pt.x, pt.y);
+
+	  if (abs(deltaX) > 0 || abs(deltaY) > 0)
+		pSample->OnMouseMove(deltaX, -deltaY);
+
+
     }
     return 0;
   }
