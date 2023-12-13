@@ -51,7 +51,7 @@ struct Material {
 	float refractionIndex;
 	float fuzz;				// metalness
 	float matte;			// how matte 
-	float padding;		// <---- adding padding for alignment
+	float padding[2];		// <---- adding padding for alignment
 };
 
 StructuredBuffer<Material> g_Materials : register(t3);
@@ -393,86 +393,112 @@ float3 HitAttribute(float3 vertexAttribute[3], BuiltInTriangleIntersectionAttrib
 }
 
 // #DXR Extra - Another ray type
-[shader("closesthit")] void PlaneClosestHit(inout HitInfo payload,
-                                                Attributes attrib) {
-
-	if (payload.depth == 0)
-	{
+[shader("closesthit")] void PlaneClosestHit(inout HitInfo payload, Attributes attrib) {
+	// Early exit for max depth
+	if (payload.depth == 0) {
 		payload.colorAndDistance = float4(0.0f, 0.0f, 0.0f, RayTCurrent());
 		return;
 	}
+
 	float3 cameraPos = GetCameraPositionFromViewMatrix(viewI);
-	float3 D = normalize(WorldRayDirection());
-	float3 N = float3(0.0f, 1.0f, 0.0f);
-
-	float3 diffC = float3(1.0f, 0.0f, 0.2);
-
+	float3 rayDirection = normalize(WorldRayDirection());
+	float3 normal = float3(0.0f, 1.0f, 0.0f); // Upward normal for plane
+	Material material = g_Materials[InstanceID()];
 	uint seed = GenerateSeed(DispatchRaysIndex().xy, elapsedTime, payload.colorAndDistance.w);
-
+	float3 hitPosition = HitWorldPosition();
 
 	RayDesc ray;
-	ray.Origin = HitWorldPosition();
+	ray.Origin = hitPosition; // Offset to prevent self-intersection
 	ray.TMin = 0.01;
 	ray.TMax = 100000;
 
-	HitInfo newPayload;
-	newPayload.colorAndDistance = float4(0, 0, 0, 0);
-	newPayload.depth = payload.depth - 1;
+	float3 accumulatedColor = float3(0, 0, 0);
 
-
-	bool diffuse = g_Materials[InstanceID()].matte < 0.0;
-	bool metal = true;
-	bool glass = !metal;
-
-
-
-
-	if (diffuse)
-	{
-		seed = GenerateSeed(float2(seed, g_Materials[InstanceID()].matte), elapsedTime, payload.colorAndDistance.w);
-		float3 scatter_direction = random_on_hemisphere(N, seed) + N;
-
-		ray.Direction = scatter_direction;
-
-		TraceRay(SceneBVH, RAY_FLAG_NONE, 0xFF, 0, 0, 0, ray, newPayload);
+	// Diffuse Reflection for Ground Surface
+	if (material.matte > 0.0) {
+		seed = GenerateSeed(float2(seed, material.matte), elapsedTime, payload.colorAndDistance.w);
+		float3 scatterDir = random_on_hemisphere(normal, seed);
+		ray.Direction = scatterDir;
+		HitInfo diffusePayload;
+		diffusePayload.colorAndDistance = float4(0, 0, 0, 0);
+		diffusePayload.depth = payload.depth - 1;
+		TraceRay(SceneBVH, RAY_FLAG_NONE, 0xFF, 0, 0, 0, ray, diffusePayload);
+		accumulatedColor += diffusePayload.colorAndDistance.rgb * material.diffuseColor.rgb;
 	}
-	else if (metal)
-	{
+	else {
+		// For non-matte surfaces, use the diffuse color directly
+		accumulatedColor += material.diffuseColor.rgb;
+	}
+
+	// Specular Reflection (Metallic Surface)
+	if (material.fuzz > 0.0) {
 		seed = GenerateSeed(float2(elapsedTime, seed), elapsedTime, payload.colorAndDistance.w);
-		float3 scatter_direction = reflect(D, N) + random_on_hemisphere(N, seed) * g_Materials[InstanceID()].fuzz;
-
-		ray.Direction = scatter_direction;
-
-		TraceRay(SceneBVH, RAY_FLAG_NONE, 0xFF, 0, 0, 0, ray, newPayload);
-	}
-	else if (glass)
-	{
-		float refractionIndex = g_Materials[InstanceID()].refractionIndex;
-		if (dot(N, D) > 0.0f) {
-			refractionIndex = 1.0f / refractionIndex;
-			N = -N;
-		}
-
-		float cos_theta = min(dot(-D, N), 1.0);
-		float sin_theta = sqrt(1.0 - cos_theta * cos_theta);
-
-		seed = GenerateSeed(float2(43211, 532364213), elapsedTime, payload.colorAndDistance.w);
-
-		float3 direction;
-
-		if (refractionIndex * sin_theta > 1.0 || reflectance(cos_theta, refractionIndex) > GetRandomFloat(seed, 0.f, .1f))
-		{
-			direction = reflect(D, N);
-		}
-		else
-		{
-			direction = refract(D, N, refractionIndex);
-		}
-
-		ray.Direction = direction;
-
-		TraceRay(SceneBVH, RAY_FLAG_NONE, 0xFF, 0, 0, 0, ray, newPayload);
+		float3 scatterDir = reflect(rayDirection, normal) + random_on_hemisphere(normal, seed) * material.fuzz;
+		ray.Direction = scatterDir;
+		HitInfo metalPayload;
+		metalPayload.colorAndDistance = float4(0, 0, 0, 0);
+		metalPayload.depth = payload.depth - 1;
+		TraceRay(SceneBVH, RAY_FLAG_NONE, 0xFF, 0, 0, 0, ray, metalPayload);
+		accumulatedColor += metalPayload.colorAndDistance.rgb * material.specularColor.rgb;
 	}
 
-	payload.colorAndDistance = float4(clamp(newPayload.colorAndDistance.rgb * 0.5 + diffC * 0.5, 0.0f, 1.0f), RayTCurrent());
+
+
+		// Find the world - space hit position
+	float3 worldOrigin = WorldRayOrigin() + RayTCurrent() * WorldRayDirection();
+
+	float3 lightDir = normalize(lightPosition - worldOrigin);
+
+	// Fire a shadow ray. The direction is hard-coded here, but can be fetched
+	// from a constant-buffer
+	ray.Origin = worldOrigin;
+	ray.Direction = lightDir;
+	ray.TMin = 0.001;
+	ray.TMax = 100000;
+
+	// Initialize the ray payload
+	ShadowHitInfo shadowPayload;
+	shadowPayload.isHit = false;
+
+	// Trace the ray
+	TraceRay(
+		// Acceleration structure
+		SceneBVH,
+		// Flags can be used to specify the behavior upon hitting a surface
+		RAY_FLAG_NONE,
+		// Instance inclusion mask, which can be used to mask out some geometry to
+		// this ray by and-ing the mask with a geometry mask. The 0xFF flag then
+		// indicates no geometry will be masked
+		0xFF,
+		// Depending on the type of ray, a given object can have several hit
+		// groups attached (ie. what to do when hitting to compute regular
+		// shading, and what to do when hitting to compute shadows). Those hit
+		// groups are specified sequentially in the SBT, so the value below
+		// indicates which offset (on 4 bits) to apply to the hit groups for this
+		// ray. In this sample we only have one hit group per object, hence an
+		// offset of 0.
+		1,
+		// The offsets in the SBT can be computed from the object ID, its instance
+		// ID, but also simply by the order the objects have been pushed in the
+		// acceleration structure. This allows the application to group shaders in
+		// the SBT in the same order as they are added in the AS, in which case
+		// the value below represents the stride (4 bits representing the number
+		// of hit groups) between two consecutive objects.
+		0,
+		// Index of the miss shader to use in case several consecutive miss
+		// shaders are present in the SBT. This allows to change the behavior of
+		// the program when no geometry have been hit, for example one to return a
+		// sky color for regular rendering, and another returning a full
+		// visibility value for shadow rays. This sample has only one miss shader,
+		// hence an index 0
+		1,
+		// Ray information to trace
+		ray,
+		// Payload associated to the ray, which will be used to communicate
+		// between the hit/miss shaders and the raygen
+		shadowPayload);
+
+	float shadowFactor = shadowPayload.isHit ? 0.5 : 1.0f;
+	// Final color calculation
+	payload.colorAndDistance = float4(clamp(accumulatedColor, 0.0f, 1.0f) * shadowFactor, RayTCurrent());
 }

@@ -876,38 +876,126 @@ void D3D12HelloTriangle::CreateAccelerationStructures() {
 
   std::vector<Material> materials;
 
-  UINT sphere_instances = 10;
+  UINT sphere_instances = 5;
 
-  std::mt19937 gen(rd()); // Seed the generator
+  // Define materials with a varied and visually appealing palette
 
-  std::uniform_real_distribution<float> distrib(0.0, 1.0);
+  // Sphere 1 - Metallic Gold
+  Material goldSphere;
+  goldSphere.emissiveness = 0.0f;
+  goldSphere.diffuseColor = XMVECTOR{ 1.0f, 0.843f, 0.0f, 1.0f }; // Gold
+  goldSphere.specularColor = XMVECTOR{ 1.0f, 0.843f, 0.0f, 1.0f };
+  goldSphere.emissiveColor = XMVECTOR{ 0.0f, 0.0f, 0.0f, 1.0f };
+  goldSphere.refractivity = 0.0f;
+  goldSphere.refractionIndex = 0.0f;
+  goldSphere.reflectivity = 1.0f; // Highly reflective
+  goldSphere.fuzz = 0.05f; // Sharp reflections
+  goldSphere.matte = 0.0f;
+  materials.push_back(goldSphere);
 
-  for (UINT i = 0; i < sphere_instances + 1; ++i)
-  {
-	  Material material;
-	  material.emissiveness = distrib(gen);
-	  material.diffuseColor = XMVECTOR{ distrib(gen)* distrib(gen), distrib(gen)* distrib(gen), distrib(gen)* distrib(gen), 1.0f };
-	  material.specularColor = XMVECTOR{ distrib(gen), distrib(gen), distrib(gen), 1.0f };
-	  material.emissiveColor = XMVECTOR{ distrib(gen), distrib(gen), distrib(gen), 1.0f };
-	  material.refractivity = i < sphere_instances ? distrib(gen) : 0.0f;
-	  material.refractionIndex = distrib(gen) * 2.0f;
-	  material.reflectivity = distrib(gen);
-	  material.fuzz = distrib(gen);
-	  material.matte = distrib(gen);
+  // Sphere 2 - Glass-like
+  Material glassSphere;
+  glassSphere.emissiveness = 0.0f;
+  glassSphere.diffuseColor = XMVECTOR{ 0.7f, 0.7f, 1.0f, 1.0f }; // Light blue color
+  glassSphere.specularColor = XMVECTOR{ 1.0f, 1.0f, 1.0f, 1.0f }; // Intense specular highlight
+  glassSphere.emissiveColor = XMVECTOR{ 0.0f, 0.0f, 0.0f, 1.0f };
+  glassSphere.refractivity = 0.95f; // High refraction for a glass-like appearance
+  glassSphere.refractionIndex = 1.5f; // Typical for glass
+  glassSphere.reflectivity = 0.1f;
+  glassSphere.fuzz = 0.0f;
+  glassSphere.matte = 0.0f;
+  materials.push_back(glassSphere);
 
-	  materials.push_back(material);
-  }
+  // Sphere 3 - Matte Red
+  Material matteRedSphere;
+  matteRedSphere.emissiveness = 0.0f;
+  matteRedSphere.diffuseColor = XMVECTOR{ 0.9f, 0.2f, 0.2f, 1.0f }; // Red
+  matteRedSphere.specularColor = XMVECTOR{ 0.5f, 0.1f, 0.1f, 1.0f };
+  matteRedSphere.emissiveColor = XMVECTOR{ 0.0f, 0.0f, 0.0f, 1.0f };
+  matteRedSphere.refractivity = 0.0f;
+  matteRedSphere.refractionIndex = 0.0f;
+  matteRedSphere.reflectivity = 0.0f;
+  matteRedSphere.fuzz = 0.0f;
+  matteRedSphere.matte = 1.0f; // Non-reflective, matte surface
+  materials.push_back(matteRedSphere);
 
-  std::uniform_real_distribution<float> distrib2(-5.0, 5.0);
+  // Sphere 4 - Shiny Blue
+  Material shinyBlueSphere;
+  shinyBlueSphere.emissiveness = 0.0f;
+  shinyBlueSphere.diffuseColor = XMVECTOR{ 0.1f, 0.1f, 0.8f, 1.0f }; // Blue
+  shinyBlueSphere.specularColor = XMVECTOR{ 0.2f, 0.2f, 1.0f, 1.0f };
+  shinyBlueSphere.emissiveColor = XMVECTOR{ 0.0f, 0.0f, 0.0f, 1.0f };
+  shinyBlueSphere.refractivity = 0.0f;
+  shinyBlueSphere.refractionIndex = 0.0f;
+  shinyBlueSphere.reflectivity = 0.5f;
+  shinyBlueSphere.fuzz = 0.0f;
+  shinyBlueSphere.matte = 0.0f;
+  materials.push_back(shinyBlueSphere);
 
-  for (int i = 0; i < sphere_instances; i++)
-  {
-	  m_sphere->addInstance(XMMatrixTranslation(distrib2(gen), -1.6 , distrib2(gen)), materials[i]);
-	  m_instances.push_back({ m_sphere->asBuffers.pResult,  m_sphere->getInstance(i).transform });
-  }
+  // Sphere 5 - Translucent Green
+  Material translucentGreenSphere;
+  translucentGreenSphere.emissiveness = 0.0f;
+  translucentGreenSphere.diffuseColor = XMVECTOR{ 0.1f, 0.9f, 0.1f, 0.5f }; // Green with some transparency
+  translucentGreenSphere.specularColor = XMVECTOR{ 0.2f, 0.9f, 0.2f, 0.5f };
+  translucentGreenSphere.emissiveColor = XMVECTOR{ 0.0f, 0.0f, 0.0f, 0.5f };
+  translucentGreenSphere.refractivity = 0.5f;
+  translucentGreenSphere.refractionIndex = 1.2f;
+  translucentGreenSphere.reflectivity = 0.2f;
+  translucentGreenSphere.fuzz = 0.0f;
+  translucentGreenSphere.matte = 0.0f;
+  materials.push_back(translucentGreenSphere);
 
-  m_planeMesh->addInstance(XMMatrixIdentity(), materials[sphere_instances]);
-  m_instances.push_back({ m_planeMesh->asBuffers.pResult,  m_planeMesh->getInstance(0).transform });
+  //// Sphere 6 - Glass-like
+  //Material glassSphere;
+  //glassSphere.emissiveness = 0.0f;
+  //glassSphere.diffuseColor = XMVECTOR{ 0.0f, 0.0f, 0.0f, 0.0f }; // Light blue color
+  //glassSphere.specularColor = XMVECTOR{ 1.0f, 1.0f, 1.0f, 1.0f }; // Intense specular highlight
+  //glassSphere.emissiveColor = XMVECTOR{ 0.0f, 0.0f, 0.0f, 1.0f };
+  //glassSphere.refractivity = 0.95f; // High refraction for a glass-like appearance
+  //glassSphere.refractionIndex = 1.5f; // Typical for glass
+  //glassSphere.reflectivity = 0.1f;
+  //glassSphere.fuzz = 0.0f;
+  //glassSphere.matte = 0.0f;
+  //materials.push_back(glassSphere);
+
+  // Ground Material - Diffuse
+  Material groundMaterial;
+  groundMaterial.emissiveness = 0.0f;
+  groundMaterial.diffuseColor = XMVECTOR{ 0.5f, 0.5f, 0.5f, 1.0f }; // Medium gray color
+  groundMaterial.specularColor = XMVECTOR{ 0.1f, 0.1f, 0.1f, 1.0f }; // Low specular highlight
+  groundMaterial.emissiveColor = XMVECTOR{ 0.0f, 0.0f, 0.0f, 1.0f };
+  groundMaterial.refractivity = 0.0f;
+  groundMaterial.refractionIndex = 0.0f;
+  groundMaterial.reflectivity = 0.0f;
+  groundMaterial.fuzz = 0.0f;
+  groundMaterial.matte = 1.0f; // Non-reflective, matte surface
+  materials.push_back(groundMaterial);
+
+
+  // Sphere Instances Placement
+ // Arrange the spheres in a visually pleasing manner
+  m_sphere->addInstance(XMMatrixTranslation(-2.0f, 0.0f, 0.0f), materials[0]);
+  m_instances.push_back({ m_sphere->asBuffers.pResult, m_sphere->getInstance(0).transform });
+
+  m_sphere->addInstance(XMMatrixTranslation(2.0f, 0.0f, 0.0f), materials[1]);
+  m_instances.push_back({ m_sphere->asBuffers.pResult, m_sphere->getInstance(1).transform });
+
+  m_sphere->addInstance(XMMatrixTranslation(-1.0f, -1.59f, 1.0f), materials[2]);
+  m_instances.push_back({ m_sphere->asBuffers.pResult, m_sphere->getInstance(2).transform });
+
+  m_sphere->addInstance(XMMatrixTranslation(1.0f, -1.59f, 1.0f), materials[3]);
+  m_instances.push_back({ m_sphere->asBuffers.pResult, m_sphere->getInstance(3).transform });
+
+  m_sphere->addInstance(XMMatrixTranslation(0.0f, -1.2f, -1.0f), materials[4]);
+  m_instances.push_back({ m_sphere->asBuffers.pResult, m_sphere->getInstance(4).transform });
+
+  // Plane Instance
+  m_planeMesh->addInstance(XMMatrixIdentity(), materials[5]);
+  m_instances.push_back({ m_planeMesh->asBuffers.pResult, m_planeMesh->getInstance(0).transform });
+
+
+
+
 
 
   m_instances.push_back({ sphereBottomLevelBuffers.pResult,  XMMatrixTranslation(0.6f, 0.01f, 0) });

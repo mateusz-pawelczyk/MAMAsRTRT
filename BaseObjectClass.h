@@ -34,7 +34,7 @@ struct alignas(16)  Material {
 	float refractionIndex;
 	float fuzz;				// metalness
 	float matte;			// how matte 
-	float padding;		// <---- adding padding for alignment
+	float padding[2];		// <---- adding padding for alignment
 
 };
 

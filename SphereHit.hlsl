@@ -32,7 +32,7 @@ struct Material {
 	float refractionIndex;
 	float fuzz;				// metalness
 	float matte;			// how matte 
-	float padding;		// <---- adding padding for alignment
+	float padding[2];		// <---- adding padding for alignment
 };
 
 StructuredBuffer<Material> g_Materials : register(t0);
@@ -50,87 +50,83 @@ float3 HitWorldPosition()
 	return WorldRayOrigin() + RayTCurrent() * WorldRayDirection();
 }
 
-[shader("closesthit")] void SphereClosestHit(inout HitInfo payload,
-	SphereAttributes attrib) {
-
-	if (payload.depth == 0)
-	{
-		payload.colorAndDistance = float4(0.0f,0.0f,0.0f, RayTCurrent());
+[shader("closesthit")] void SphereClosestHit(inout HitInfo payload, SphereAttributes attrib) {
+	// Early exit for max depth
+	if (payload.depth == 0) {
+		payload.colorAndDistance = float4(0.0f, 0.0f, 0.0f, RayTCurrent());
 		return;
 	}
+
 	float3 cameraPos = GetCameraPositionFromViewMatrix(viewI);
-	float3 D = normalize(WorldRayDirection());
-	float3 N = normalize(attrib.normal);
+	float3 hitPosition = HitWorldPosition();
 
-	float3 diffC = g_Materials[InstanceID()].diffuseColor.rgb;
-
+	float3 rayDirection = normalize(WorldRayDirection());
+	float3 lightDir = hitPosition - lightPosition;
+	float3 normal = normalize(attrib.normal);
+	Material material = g_Materials[InstanceID()];
 	uint seed = GenerateSeed(DispatchRaysIndex().xy, elapsedTime, payload.colorAndDistance.w);
 
-
 	RayDesc ray;
-	ray.Origin = HitWorldPosition();
+	ray.Origin = hitPosition + normal * 0.01; // Offset to prevent self-intersection
 	ray.TMin = 0.01;
 	ray.TMax = 100000;
 
-	HitInfo newPayload;
-	newPayload.colorAndDistance = float4(0, 0, 0, 0);
-	newPayload.depth = payload.depth - 1;
+	float3 accumulatedColor = float3(0, 0, 0);
 
+	// Ambient color component
+	float3 ambientColor = material.diffuseColor.rgb * 0.1; // Simulate some ambient light
 
-	bool diffuse = g_Materials[InstanceID()].matte < 3.0;
-	bool metal = !diffuse && g_Materials[InstanceID()].matte < 0.7;
-	bool glass = !metal;
-
-
-
-
-	if (diffuse)
-	{
-		seed = GenerateSeed(float2(seed, g_Materials[InstanceID()].matte), elapsedTime, payload.colorAndDistance.w);
-		float3 scatter_direction = random_on_hemisphere(N, seed) + N;
-
-		ray.Direction = scatter_direction;
-
-		TraceRay(SceneBVH, RAY_FLAG_NONE, 0xFF, 0, 0, 0, ray, newPayload);
+	// Emissive Material
+	if (material.emissiveness > 0.0) {
+		accumulatedColor += material.emissiveColor.rgb * material.emissiveness;
 	}
-	else if (metal)
-	{
+
+
+
+	// Diffuse Reflection
+	if (material.emissiveness > 0.0) {
+		seed = GenerateSeed(float2(seed, material.matte), elapsedTime, payload.colorAndDistance.w);
+		float3 scatterDir = random_on_hemisphere(normal, seed);
+		ray.Direction = scatterDir;
+		HitInfo diffusePayload;
+		diffusePayload.colorAndDistance = float4(0, 0, 0, 0);
+		diffusePayload.depth = payload.depth - 1;
+		TraceRay(SceneBVH, RAY_FLAG_NONE, 0xFF, 0, 0, 0, ray, diffusePayload);
+		float NdotL = max(dot(normal, -lightDir), 0.0);
+
+		accumulatedColor += diffusePayload.colorAndDistance.rgb * material.diffuseColor.rgb;
+	}
+
+	// Specular Reflection (Metal)
+	if (material.reflectivity > 0.0) {
 		seed = GenerateSeed(float2(elapsedTime, seed), elapsedTime, payload.colorAndDistance.w);
-		float3 scatter_direction = reflect(D, N) + random_on_hemisphere(N, seed) * g_Materials[InstanceID()].fuzz;
-
-		ray.Direction = scatter_direction;
-
-		TraceRay(SceneBVH, RAY_FLAG_NONE, 0xFF, 0, 0, 0, ray, newPayload);
-	}
-	else if (glass)
-	{
-		float refractionIndex = g_Materials[InstanceID()].refractionIndex;
-		if (dot(N, D) > 0.0f) {
-			refractionIndex = 1.0f / refractionIndex;
-			N = -N;
-		}
-
-		float cos_theta = min(dot(-D, N), 1.0);
-		float sin_theta = sqrt(1.0 - cos_theta * cos_theta);
-
-		seed = GenerateSeed(float2(43211, 532364213), elapsedTime, payload.colorAndDistance.w);
-
-		float3 direction;
-
-		if (refractionIndex * sin_theta > 1.0 || reflectance(cos_theta, refractionIndex) > GetRandomFloat(seed, 0.f, .1f))
-		{
-			direction = reflect(D, N);
-		}
-		else
-		{
-			direction = refract(D, N, refractionIndex);
-		}
-
-		ray.Direction = direction;
-
-		TraceRay(SceneBVH, RAY_FLAG_NONE, 0xFF, 0, 0, 0, ray, newPayload);
+		float3 reflectedDir = reflect(rayDirection, normal);
+		float3 fuzzDir = random_on_hemisphere(normal, seed) * material.fuzz;
+		ray.Direction = normalize(reflectedDir + fuzzDir);
+		HitInfo metalPayload;
+		metalPayload.colorAndDistance = float4(0, 0, 0, 0);
+		metalPayload.depth = payload.depth - 1;
+		TraceRay(SceneBVH, RAY_FLAG_NONE, 0xFF, 0, 0, 0, ray, metalPayload);
+		accumulatedColor += metalPayload.colorAndDistance.rgb * material.reflectivity + material.specularColor.rgb * material.emissiveness;
 	}
 
-	payload.colorAndDistance = float4(clamp(newPayload.colorAndDistance.rgb * (1.0f - g_Materials[InstanceID()].emissiveness) + diffC * g_Materials[InstanceID()].emissiveness, 0.0f, 1.0f), RayTCurrent());
+	// Refraction (Glass)
+	if (material.refractivity > 0.0) {
+		float refractionIndex = material.refractionIndex;
+		bool entering = dot(normal, rayDirection) < 0.0f;
+		float3 refractedDir = refract(rayDirection, entering ? normal : -normal, entering ? 1.0f / refractionIndex : refractionIndex);
+		ray.Direction = refractedDir;
+		HitInfo glassPayload;
+		glassPayload.colorAndDistance = float4(0, 0, 0, 0);
+		glassPayload.depth = payload.depth - 1;
+		TraceRay(SceneBVH, RAY_FLAG_NONE, 0xFF, 0, 0, 0, ray, glassPayload);
+		float3 refractedColor = glassPayload.colorAndDistance.rgb; // This should be the color from the refracted ray
+		accumulatedColor = lerp(accumulatedColor, refractedColor, material.refractivity);
+	}
+
+	// Add ambient component to final color
+	accumulatedColor += ambientColor;
+
+	// Final color calculation
+	payload.colorAndDistance = float4(clamp(accumulatedColor, 0.0f, 1.0f), RayTCurrent());
 }
-

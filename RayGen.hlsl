@@ -36,7 +36,7 @@ cbuffer CameraParams : register(b0)
   float samples_per_pixel = 16.f;
 
 
-  float focusDistance = 3.f;
+  float focusDistance = 5.f;
   // Perspective
   float3 color = float3(0.0f, 0.0f, 0.0f);
   for (int i = 0; i < samples_per_pixel; ++i)
@@ -69,7 +69,7 @@ cbuffer CameraParams : register(b0)
 	  float3 focusPoint = ray.Origin + ray.Direction * focusDistance;
 	  ng.seed = Cycle(ng.seed);
 
-	  float2 lensPoint = random_in_circle_using_angle(ng.seed) * 0.04f;
+	  float2 lensPoint = random_in_circle_using_angle(ng.seed) * 0.1f;
 	  float3 newOrigin = ray.Origin + float3(lensPoint.x, lensPoint.y, 0);
 	  float3 newDirection = normalize(focusPoint - newOrigin);
 	  ray.Origin = newOrigin;
