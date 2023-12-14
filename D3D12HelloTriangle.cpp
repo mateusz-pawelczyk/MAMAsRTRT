@@ -890,7 +890,7 @@ void D3D12HelloTriangle::AddGround(Material groundMaterial) {
 // Main Function or Initialization Function
 void D3D12HelloTriangle::CreateScene(int numSpheres, float minSphereRadius, float maxSphereRadius) {
 	// Initialize random seed
-	srand(static_cast<unsigned int>(m_scene.elapsedTime));
+	srand(static_cast<unsigned int>(time(nullptr)));
 
 	// Define ground material and add ground
 	Material groundMaterial;

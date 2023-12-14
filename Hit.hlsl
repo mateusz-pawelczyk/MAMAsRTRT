@@ -434,30 +434,30 @@ float3 HitAttribute(float3 vertexAttribute[3], BuiltInTriangleIntersectionAttrib
 	const int numAOsamples = 4; 
 	float occlusionFactor = 0.0f;
 
-	// Cast rays in the hemisphere to check for occlusion
-	for (int i = 0; i < numAOsamples; ++i) {
-		seed = GenerateSeed(DispatchRaysIndex().xy, elapsedTime, payload.colorAndDistance.w);	
-		float3 randomDir = random_on_hemisphere(N, seed);
+	//// Cast rays in the hemisphere to check for occlusion
+	//for (int i = 0; i < numAOsamples; ++i) {
+	//	seed = GenerateSeed(DispatchRaysIndex().xy, elapsedTime, payload.colorAndDistance.w);	
+	//	float3 randomDir = random_on_hemisphere(N, seed);
 
-		RayDesc aoRay;
-		aoRay.Origin = hitPosition; 
-		aoRay.Direction = randomDir;
-		aoRay.TMin = 0.01f;
-		aoRay.TMax = 5.0f; 
+	//	RayDesc aoRay;
+	//	aoRay.Origin = hitPosition; 
+	//	aoRay.Direction = randomDir;
+	//	aoRay.TMin = 0.01f;
+	//	aoRay.TMax = 5.0f; 
 
-		// Trace the ray
-		ShadowHitInfo aoPayload;
-		aoPayload.isHit = true;
-		TraceRay(SceneBVH, RAY_FLAG_SKIP_CLOSEST_HIT_SHADER | RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH, 0xFF, 1, 0, 1, aoRay, aoPayload); // 
+	//	// Trace the ray
+	//	ShadowHitInfo aoPayload;
+	//	aoPayload.isHit = true;
+	//	TraceRay(SceneBVH, RAY_FLAG_SKIP_CLOSEST_HIT_SHADER | RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH, 0xFF, 1, 0, 1, aoRay, aoPayload); // 
 
-		// If the AO ray hits something, increment the occlusion factor
-		if (aoPayload.isHit) {
-			occlusionFactor += 1.0f;
-		}
-	}
+	//	// If the AO ray hits something, increment the occlusion factor
+	//	if (aoPayload.isHit) {
+	//		occlusionFactor += 1.0f;
+	//	}
+	//}
 
-	// Final AO factor is the ratio of occluded rays to total rays
-	occlusionFactor /= numAOsamples;
+	//// Final AO factor is the ratio of occluded rays to total rays
+	//occlusionFactor /= numAOsamples;
 
 	
 	//* scatteredPayload.colorAndDistance.rgb

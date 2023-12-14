@@ -16,7 +16,7 @@ C:\Users\ma2880pa-s\Program\MAMAsRTRT\D3D12HelloTriangle.cpp(941): warning C4244
      ROBOCOPY     ::     Robust File Copy for Windows                              
   -------------------------------------------------------------------------------
   
-    Started : den 14 december 2023 13:50:17
+    Started : den 14 december 2023 13:59:32
      Source : C:\Program Files (x86)\Windows Kits\10\bin\10.0.17763.0\x64\
        Dest : C:\Users\ma2880pa-s\Program\MAMAsRTRT\bin\x64\Debug\
   
@@ -36,5 +36,5 @@ C:\Users\ma2880pa-s\Program\MAMAsRTRT\D3D12HelloTriangle.cpp(941): warning C4244
      Files :         2         0         2         0         0         0
      Bytes :   12.85 m         0   12.85 m         0         0         0
      Times :   0:00:00   0:00:00                       0:00:00   0:00:00
-     Ended : den 14 december 2023 13:50:17
+     Ended : den 14 december 2023 13:59:32
   
