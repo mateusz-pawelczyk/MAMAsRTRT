@@ -847,7 +847,7 @@ Material D3D12HelloTriangle::CreateRandomMaterial() {
 		static_cast<float>(rand()) / static_cast<float>(RAND_MAX), // Blue
 		1.0f // Alpha
 	};
-	mat.refractionIndex = matteValue < 0.95 ? 0.0f : 1.5f; // Refractive index for dielectric materials
+	mat.refractionIndex = matteValue < 0.95 ? 0.0f : static_cast<float>(rand()) / static_cast<float>(RAND_MAX) * 0.9 + 1.0f; // Refractive index for dielectric materials 
 	mat.fuzz = matteValue < 0.95 ? matteValue * 0.1f : 0.0f; // Fuzz for metallic materials
 	mat.matte = matteValue;
 
@@ -856,12 +856,27 @@ Material D3D12HelloTriangle::CreateRandomMaterial() {
 
 // Sphere Addition Function
 void D3D12HelloTriangle::AddRandomSpheres(int numSpheres) {
+	int gridSize = ceil(sqrt(numSpheres)); // Determine the grid size
+	float spacing = 2.f; // Define the spacing between the spheres, depends on their size
+	float jitter = spacing * 0.5f; // Maximum random displacement from the grid position
+
 	for (int i = 0; i < numSpheres; ++i) {
+		int gridX = i % gridSize;
+		int gridZ = i / gridSize;
+
+		// Calculate the base grid position
+		float baseX = gridX * spacing;
+		float baseZ = gridZ * spacing;
+
+		// Apply a random jitter within the bounds of the grid cell
+		float offsetX = (static_cast<float>(rand()) / static_cast<float>(RAND_MAX) - 0.5f) * jitter;
+		float offsetZ = (static_cast<float>(rand()) / static_cast<float>(RAND_MAX) - 0.5f) * jitter;
+
 		// Random center position
 		XMVECTOR center = XMVectorSet(
-			static_cast<float>(rand()) / static_cast<float>(RAND_MAX) * numSpheres * 0.4, // x
-			0.411, // y
-			static_cast<float>(rand()) / static_cast<float>(RAND_MAX) * numSpheres * 0.4, // z
+			baseX + offsetX, // x
+			0.42, // y
+			baseZ + offsetZ, // z
 			0.0f
 		);
 
@@ -940,7 +955,7 @@ void D3D12HelloTriangle::CreateAccelerationStructures() {
 
   //ProceduralGeometry proceduralSphere(-0.0f, -0.0f, -0.0f, 1.0f, 1.0f, 1.0f, m_device);
   m_sphere = new Sphere( 0.4f, m_device);
-  m_planeMesh = new Plane(XMFLOAT3(0, 0.0f, 0.0f), XMFLOAT3(2 * numSpheres * 0.4f, 0.f, 2 * numSpheres * 0.4f), m_device);
+  m_planeMesh = new Plane(XMFLOAT3(0, 0.0f, 0.0f), XMFLOAT3(4 * numSpheres * 0.4f, 0.f, 4 * numSpheres * 0.4f), m_device);
 
 
   BLASBuilder blasBuilder(m_device);

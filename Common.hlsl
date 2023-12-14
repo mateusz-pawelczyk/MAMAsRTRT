@@ -67,7 +67,7 @@ float GetCurrentFloat(int seed) {
 uint LCG(uint seed) {
 	const uint a = 1664525;
 	const uint c = 1013904223;
-	const uint m = 0xffffffff; // Typically 2^32
+	const uint m = 0xffffffff; 
 	return (a * seed + c) & m;
 }
 
