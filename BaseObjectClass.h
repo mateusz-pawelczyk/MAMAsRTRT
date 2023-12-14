@@ -17,10 +17,6 @@ struct Instance
 
 };
 
-struct SphereInfo
-{
-	float radius;
-};
 
 
 // Make sure to use correct alignment! In this case (maybe also in general) we had to make sure that the accumulated sizes add up to a multiple of 16.
@@ -66,8 +62,6 @@ public:
 	static ComPtr<ID3D12Resource> m_materialBuffer;
 	static std::vector<std::pair<std::wstring, std::wstring>> m_hitGroups;
 
-	using GeometryVariant = std::variant<SphereInfo>;
-	static std::vector<GeometryVariant> geometries;
 	//static std::pair<const std::wstring&, const std::wstring&> getHitGroupPair(UINT index) { return m_hitGroups[index]; }
 
 	D3D12_RAYTRACING_GEOMETRY_DESC getGeometryDescription() { return m_geometryDescription; };

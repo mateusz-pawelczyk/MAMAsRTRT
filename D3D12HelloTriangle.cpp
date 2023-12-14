@@ -177,14 +177,14 @@ void D3D12HelloTriangle::LoadPipeline() {
                             // flush on it.
       Win32Application::GetHwnd(), &swapChainDesc, nullptr, nullptr,
       &swapChain));
-  swapChain->SetFullscreenState(TRUE, nullptr);
-  swapChain->ResizeBuffers(FrameCount, m_screenWidth, m_screenHeight, DXGI_FORMAT_R8G8B8A8_UNORM, DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH);
-  SetWindowLongPtr(Win32Application::GetHwnd(), GWL_STYLE, WS_POPUP);
-  SetWindowPos(Win32Application::GetHwnd(), HWND_TOP, 0, 0, m_screenWidth, m_screenHeight, SWP_NOZORDER | SWP_FRAMECHANGED | SWP_SHOWWINDOW);
+  //swapChain->SetFullscreenState(TRUE, nullptr);
+  //swapChain->ResizeBuffers(FrameCount, m_screenWidth, m_screenHeight, DXGI_FORMAT_R8G8B8A8_UNORM, DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH);
+  //SetWindowLongPtr(Win32Application::GetHwnd(), GWL_STYLE, WS_POPUP);
+  //SetWindowPos(Win32Application::GetHwnd(), HWND_TOP, 0, 0, m_screenWidth, m_screenHeight, SWP_NOZORDER | SWP_FRAMECHANGED | SWP_SHOWWINDOW);
  
-  // This sample does not support fullscreen transitions.
-  ThrowIfFailed(factory->MakeWindowAssociation(Win32Application::GetHwnd(),
-                                               DXGI_MWA_NO_ALT_ENTER));
+  //// This sample does not support fullscreen transitions.
+  //ThrowIfFailed(factory->MakeWindowAssociation(Win32Application::GetHwnd(),
+  //                                             DXGI_MWA_NO_ALT_ENTER));
 
   ThrowIfFailed(swapChain.As(&m_swapChain));
   m_frameIndex = m_swapChain->GetCurrentBackBufferIndex();
@@ -835,7 +835,80 @@ void D3D12HelloTriangle::CreateTopLevelAS(
                                  updateOnly, m_topLevelASBuffers.pResult.Get());
 }
 
-// Function to generate random numbers
+// Random Material Generation Function
+Material D3D12HelloTriangle::CreateRandomMaterial() {
+	Material mat;
+	float matteValue = static_cast<float>(rand()) / static_cast<float>(RAND_MAX);
+
+	// Randomize material properties
+	mat.attenuation = XMVECTOR{
+		static_cast<float>(rand()) / static_cast<float>(RAND_MAX), // Red
+		static_cast<float>(rand()) / static_cast<float>(RAND_MAX), // Green
+		static_cast<float>(rand()) / static_cast<float>(RAND_MAX), // Blue
+		1.0f // Alpha
+	};
+	mat.refractionIndex = matteValue < 0.95 ? 0.0f : 1.5f; // Refractive index for dielectric materials
+	mat.fuzz = matteValue < 0.95 ? matteValue * 0.1f : 0.0f; // Fuzz for metallic materials
+	mat.matte = matteValue;
+
+	return mat;
+}
+
+// Sphere Addition Function
+void D3D12HelloTriangle::AddRandomSpheres(int numSpheres) {
+	for (int i = 0; i < numSpheres; ++i) {
+		// Random center position
+		XMVECTOR center = XMVectorSet(
+			static_cast<float>(rand()) / static_cast<float>(RAND_MAX) * numSpheres * 0.4, // x
+			0.411, // y
+			static_cast<float>(rand()) / static_cast<float>(RAND_MAX) * numSpheres * 0.4, // z
+			0.0f
+		);
+
+		Material sphereMat = CreateRandomMaterial();
+
+		// Determine the hit group based on the matte property
+		LPCWSTR hitGroupName;
+		if (sphereMat.matte < 0.8f) {
+			hitGroupName = L"SphereHitGroupLambertian";
+		}
+		else if (sphereMat.matte < 0.95f) {
+			hitGroupName = L"SphereHitGroupMetal";
+		}
+		else {
+			hitGroupName = L"SphereHitGroupDielectric";
+		}
+
+		// Add sphere instance
+		m_sphere->addInstance(XMMatrixTranslation(XMVectorGetX(center), XMVectorGetY(center), XMVectorGetZ(center)), sphereMat, hitGroupName, L"ShadowSphereHitGroup");
+		m_instances.push_back({ m_sphere->asBuffers.pResult, m_sphere->getInstance(i).transform });
+	}
+}
+
+// Add Ground Function
+void D3D12HelloTriangle::AddGround(Material groundMaterial) {
+	// Add plane instance with identity matrix, meaning no transformation.
+	m_planeMesh->addInstance(XMMatrixIdentity(), groundMaterial, L"HitGroup", L"ShadowHitGroup");
+	m_instances.push_back({ m_planeMesh->asBuffers.pResult, m_planeMesh->getInstance(0).transform });
+}
+
+// Main Function or Initialization Function
+void D3D12HelloTriangle::CreateScene(int numSpheres) {
+	// Initialize random seed - you would typically do this once at the start
+	srand(static_cast<unsigned int>(time(nullptr)));
+
+	// Define ground material and add ground
+	Material groundMaterial;
+	groundMaterial.attenuation = XMVECTOR{ 0.8f, 0.8f, 0.8f, 1.0f };
+	groundMaterial.refractionIndex = 0.0f;
+	groundMaterial.fuzz = 0.0f;
+	groundMaterial.matte = 1.0f; // Non-reflective surface
+
+	// Add random spheres
+	AddRandomSpheres(numSpheres); // Add 10 random spheres
+	AddGround(groundMaterial);
+
+}
 
 //-----------------------------------------------------------------------------
 //
@@ -862,9 +935,12 @@ void D3D12HelloTriangle::CreateAccelerationStructures() {
       CreateBottomLevelAS({{m_planeBuffer.Get(), 6}});
   BaseObjectClass::totalInstanceCount = 0;
 
+
+  int numSpheres = 100;
+
   //ProceduralGeometry proceduralSphere(-0.0f, -0.0f, -0.0f, 1.0f, 1.0f, 1.0f, m_device);
   m_sphere = new Sphere( 0.4f, m_device);
-  m_planeMesh = new Plane(XMFLOAT3(-10.f, 0.0f, -10.f), XMFLOAT3(10.f, 0.f, 10.f), m_device);
+  m_planeMesh = new Plane(XMFLOAT3(0, 0.0f, 0.0f), XMFLOAT3(2 * numSpheres * 0.4f, 0.f, 2 * numSpheres * 0.4f), m_device);
 
 
   BLASBuilder blasBuilder(m_device);
@@ -875,7 +951,6 @@ void D3D12HelloTriangle::CreateAccelerationStructures() {
 
   std::mt19937 gen(rd());
   std::uniform_real_distribution<float> distribution(0.0, 1.0); // Adjust range as needed
-
 
 
   std::vector<Material> materials;
@@ -890,66 +965,7 @@ void D3D12HelloTriangle::CreateAccelerationStructures() {
   //float matte;			// how matte 
   //float padding;
 
-  for (int a = -4; a < 4; a++) {
-	  for (int b = -4; b < 4; b++) {
-		  auto choose_mat = distribution(gen);
-		  XMVECTOR center{ a * 3.0 + distribution(gen) * 3.0, 0.411, b * 3.0 +  distribution(gen) * 3.0, 1.0f};
-
-		  if (XMVectorGetX(XMVector3Length(XMVECTOR({ XMVectorGetX(center) - 4.0f, XMVectorGetY(center) - 0.411f, XMVectorGetZ(center), 1.0f }))) > 0.9f) {
-
-			  if (choose_mat < 0.8) {
-				  // diffuse
-				  auto albedo = XMVECTOR({ distribution(gen) * distribution(gen) ,distribution(gen) * distribution(gen) ,distribution(gen) * distribution(gen) , 1.0f});
-				  Material goldSphere;
-				  goldSphere.attenuation = albedo; 
-				  goldSphere.refractionIndex = 0.0f;
-				  goldSphere.fuzz = 0.0f;
-				  goldSphere.matte = choose_mat;
-				  m_sphere->addInstance(XMMatrixTranslation(XMVectorGetX(center), XMVectorGetY(center), XMVectorGetZ(center)), goldSphere, L"SphereHitGroupLambertian", L"ShadowSphereHitGroup");
-				  m_instances.push_back({ m_sphere->asBuffers.pResult, m_sphere->getInstance((b+4) + (a+4) * 8).transform });
-
-			  }
-			  else if (choose_mat < 0.95) {
-				  std::uniform_real_distribution<float> distribution2(0.5, 1.0); // Adjust range as needed
-
-				  auto albedo = XMVECTOR({ distribution2(gen)  ,distribution2(gen) ,distribution2(gen)  , 1.0f });
-
-				  auto fuzz = distribution2(gen) -0.5f;
-				  Material goldSphere;
-				  goldSphere.attenuation = albedo;
-				  goldSphere.refractionIndex = 0.0f;
-				  goldSphere.fuzz = fuzz;
-				  goldSphere.matte = choose_mat;
-				  m_sphere->addInstance(XMMatrixTranslation(XMVectorGetX(center), XMVectorGetY(center), XMVectorGetZ(center)), goldSphere, L"SphereHitGroupMetal", L"ShadowSphereHitGroup");
-				  m_instances.push_back({ m_sphere->asBuffers.pResult, m_sphere->getInstance((b + 4) + (a + 4) * 8).transform });
-			  }
-			  else {
-				  Material glassSphere;
-				  glassSphere.attenuation = XMVECTOR{ 1.0f, 0.843f, 0.0f, 1.0f }; 
-				  glassSphere.refractionIndex = 1.5f;
-				  glassSphere.fuzz = 0.0;
-				  glassSphere.matte = 0.98f;
-				  m_sphere->addInstance(XMMatrixTranslation(XMVectorGetX(center), XMVectorGetY(center), XMVectorGetZ(center)), glassSphere, L"SphereHitGroupDielectric", L"ShadowSphereHitGroup");
-				  m_instances.push_back({ m_sphere->asBuffers.pResult, m_sphere->getInstance((b + 4) + (a + 4) * 8).transform });
-			  }
-		  }
-	  }
-  }
-
-  
-
-  // Ground Material - Diffuse
-  Material groundMaterial;
-  groundMaterial.attenuation = XMVECTOR{ 0.5f, 0.5f, 0.5f, 1.0f }; // Gold
-  groundMaterial.refractionIndex = 1.5f;
-  groundMaterial.fuzz = 0.1;
-  groundMaterial.matte = 0.1f;
-
-
-  
-  // Plane Instance
-  m_planeMesh->addInstance(XMMatrixIdentity(), groundMaterial, L"ClosestHit", L"ShadowHitGroup");
-  m_instances.push_back({ m_planeMesh->asBuffers.pResult, m_planeMesh->getInstance(0).transform });
+  CreateScene(numSpheres);
 
 
 

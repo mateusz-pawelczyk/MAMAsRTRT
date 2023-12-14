@@ -285,8 +285,8 @@ void SphereClosestHitDielectric(inout HitInfo payload, SphereAttributes attrib)
 		N = -N;
 	}
 
-	double cos_theta = min(dot(-D, N), 1.0);
-	double sin_theta = sqrt(1.0 - cos_theta * cos_theta);
+	float cos_theta = min(dot(-D, N), 1.0);
+	float sin_theta = sqrt(1.0 - cos_theta * cos_theta);
 
 	bool cannot_refract = eta * sin_theta > 1.0;
 	float3 direction;

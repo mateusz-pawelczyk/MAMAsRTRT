@@ -64,11 +64,19 @@ float GetCurrentFloat(int seed) {
 	return RANDOM_AM * seed;
 }
 
-// Returns a random float within the input range.
-float GetRandomFloat(int seed, float low, float high) {
-	float v = GetCurrentFloat(seed);
-	return low * (1.0f - v) + high * v;
+uint LCG(uint seed) {
+	const uint a = 1664525;
+	const uint c = 1013904223;
+	const uint m = 0xffffffff; // Typically 2^32
+	return (a * seed + c) & m;
 }
+
+float GetRandomFloat(uint seed, float low, float high) {
+	seed = LCG(seed); // Update seed with LCG
+	float randomFloat = (seed / float(0xffffffff)); // Convert to [0,1] range
+	return low + (high - low) * randomFloat; // Map to [low,high] range
+}
+
 
 
 

@@ -430,4 +430,9 @@ float3 HitAttribute(float3 vertexAttribute[3], BuiltInTriangleIntersectionAttrib
 	TraceRay(SceneBVH, RAY_FLAG_NONE, 0xFF, 0, 0, 0, ray, scatteredPayload);
 
 	payload.colorAndDistance = float4(albedo * scatteredPayload.colorAndDistance.rgb, RayTCurrent());
+
+
+
+
+
 }

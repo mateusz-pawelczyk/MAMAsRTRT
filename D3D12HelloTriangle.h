@@ -179,6 +179,19 @@ private:
           &instances,
       bool updateOnly = false);
 
+
+  Material CreateRandomMaterial();
+
+  // Sphere Addition Function
+  void AddRandomSpheres(int numSpheres);
+
+  // Add Ground Function
+  void AddGround(Material groundMaterial);
+
+  // Main Function or Initialization Function
+  void CreateScene(int numSpheres);
+
+
   /// Create all acceleration structures, bottom and top
   void CreateAccelerationStructures();
 
