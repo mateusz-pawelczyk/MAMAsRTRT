@@ -36,15 +36,12 @@ float3 objectRayDirection()
 {
 	SphereAttributes attr;
 
-	uint instanceIndex = PrimitiveIndex();
-	Sphere sphere;
-	sphere.center = float3(-0.5f, -0.5f, -0.5f);
-	sphere.radius = 0.4f;
+
 
 	float3 oc = objectRayOrigin();
 	float a = dot(objectRayDirection(), objectRayDirection());
 	float half_b = dot(oc, objectRayDirection());
-	float c = dot(oc, oc) - sphere.radius * sphere.radius;
+	float c = dot(oc, oc) - 1.0f;
 	float discriminant = half_b * half_b - a * c;
 
 	if (discriminant > 0) {
@@ -54,13 +51,12 @@ float3 objectRayDirection()
 
 		if (t >= RayTMin()) {
 			float3 P = objectRayOrigin() + t * objectRayDirection();
-			float3 N = normalize(P - sphere.center); // Normal at the intersection
-
+			float3 N = normalize(P);
 			// Calculate UV coordinates
 			float u = atan2(N.z, N.x) / (2 * 3.14159265359f);
-			float v = (acos(N.y / sphere.radius) / 3.14159265359f);
+			float v = (acos(N.y) / 3.14159265359f);
 			attr.uv = float2(u, 1.0f - v); // Adjust V if necessary
-			attr.normal = normalize(P);
+			attr.normal = N;
 			ReportHit(t, 0, attr);
 		}
 		//else if (t2 > RayTMin()) // if 

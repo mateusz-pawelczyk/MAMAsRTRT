@@ -66,16 +66,16 @@ cbuffer CameraParams : register(b0)
 	  ray.TMax = 100000;
 
 
-	  float3 focusPoint = ray.Origin + ray.Direction * focusDistance;
-	  ng.seed = Cycle(ng.seed);
+	  //float3 focusPoint = ray.Origin + ray.Direction * focusDistance;
+	  //ng.seed = Cycle(ng.seed);
 
-	  float2 lensPoint = random_in_circle_using_angle(ng.seed) * 0.1f;
-	  float3 newOrigin = ray.Origin + float3(lensPoint.x, lensPoint.y, 0);
-	  float3 newDirection = normalize(focusPoint - newOrigin);
-	  ray.Origin = newOrigin;
-	  ray.Direction = newDirection;
-	  
-	  payload.colorAndDistance = float4(0, 0, 0, float(i));
+	  //float2 lensPoint = random_in_circle_using_angle(ng.seed) * 0.1f;
+	  //float3 newOrigin = ray.Origin + float3(lensPoint.x, lensPoint.y, 0);
+	  //float3 newDirection = normalize(focusPoint - newOrigin);
+	  //ray.Origin = newOrigin;
+	  //ray.Direction = newDirection;
+	  //
+	  //payload.colorAndDistance = float4(0, 0, 0, float(i));
 
 
 	  // Trace the ray

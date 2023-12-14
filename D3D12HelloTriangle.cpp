@@ -855,9 +855,9 @@ Material D3D12HelloTriangle::CreateRandomMaterial() {
 }
 
 // Sphere Addition Function
-void D3D12HelloTriangle::AddRandomSpheres(int numSpheres) {
+void D3D12HelloTriangle::AddRandomSpheres(int numSpheres, int minSphereRadius, int maxSphereRadius) {
 	int gridSize = ceil(sqrt(numSpheres)); // Determine the grid size
-	float spacing = 2.f; // Define the spacing between the spheres, depends on their size
+	float spacing = maxSphereRadius * 5.0f; // Define the spacing between the spheres, depends on their size
 	float jitter = spacing * 0.5f; // Maximum random displacement from the grid position
 
 	for (int i = 0; i < numSpheres; ++i) {
@@ -865,8 +865,8 @@ void D3D12HelloTriangle::AddRandomSpheres(int numSpheres) {
 		int gridZ = i / gridSize;
 
 		// Calculate the base grid position
-		float baseX = gridX * spacing;
-		float baseZ = gridZ * spacing;
+		float baseX = gridX * spacing + 2.0f;
+		float baseZ = gridZ * spacing + 2.0f;
 
 		// Apply a random jitter within the bounds of the grid cell
 		float offsetX = (static_cast<float>(rand()) / static_cast<float>(RAND_MAX) - 0.5f) * jitter;
@@ -894,8 +894,10 @@ void D3D12HelloTriangle::AddRandomSpheres(int numSpheres) {
 			hitGroupName = L"SphereHitGroupDielectric";
 		}
 
+		float randomScale = (static_cast<float>(rand()) / static_cast<float>(RAND_MAX));
+		float radius = minSphereRadius + randomScale * (maxSphereRadius - minSphereRadius);
 		// Add sphere instance
-		m_sphere->addInstance(XMMatrixTranslation(XMVectorGetX(center), XMVectorGetY(center), XMVectorGetZ(center)), sphereMat, hitGroupName, L"ShadowSphereHitGroup");
+		m_sphere->addSphereInstance(XMMatrixTranslation(XMVectorGetX(center), radius+0.02, XMVectorGetZ(center)), sphereMat, hitGroupName, L"ShadowSphereHitGroup", radius);
 		m_instances.push_back({ m_sphere->asBuffers.pResult, m_sphere->getInstance(i).transform });
 	}
 }
@@ -908,8 +910,8 @@ void D3D12HelloTriangle::AddGround(Material groundMaterial) {
 }
 
 // Main Function or Initialization Function
-void D3D12HelloTriangle::CreateScene(int numSpheres) {
-	// Initialize random seed - you would typically do this once at the start
+void D3D12HelloTriangle::CreateScene(int numSpheres, int minSphereRadius, int maxSphereRadius) {
+	// Initialize random seed
 	srand(static_cast<unsigned int>(time(nullptr)));
 
 	// Define ground material and add ground
@@ -920,7 +922,7 @@ void D3D12HelloTriangle::CreateScene(int numSpheres) {
 	groundMaterial.matte = 1.0f; // Non-reflective surface
 
 	// Add random spheres
-	AddRandomSpheres(numSpheres); // Add 10 random spheres
+	AddRandomSpheres(numSpheres, minSphereRadius, maxSphereRadius);
 	AddGround(groundMaterial);
 
 }
@@ -952,10 +954,12 @@ void D3D12HelloTriangle::CreateAccelerationStructures() {
 
 
   int numSpheres = 100;
+  int maxSphereRadius = 1.0f;
+  int minSphereRadius = 0.4f;
 
   //ProceduralGeometry proceduralSphere(-0.0f, -0.0f, -0.0f, 1.0f, 1.0f, 1.0f, m_device);
-  m_sphere = new Sphere( 0.4f, m_device);
-  m_planeMesh = new Plane(XMFLOAT3(0, 0.0f, 0.0f), XMFLOAT3(4 * numSpheres * 0.4f, 0.f, 4 * numSpheres * 0.4f), m_device);
+  m_sphere = new Sphere( 1.0f, m_device);
+  m_planeMesh = new Plane(XMFLOAT3(-numSpheres, 0.f, -numSpheres), XMFLOAT3(numSpheres, 0.f, numSpheres), m_device);
 
 
   BLASBuilder blasBuilder(m_device);
@@ -980,7 +984,7 @@ void D3D12HelloTriangle::CreateAccelerationStructures() {
   //float matte;			// how matte 
   //float padding;
 
-  CreateScene(numSpheres);
+  CreateScene(numSpheres, minSphereRadius, maxSphereRadius);
 
 
 

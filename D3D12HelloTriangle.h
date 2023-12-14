@@ -183,13 +183,13 @@ private:
   Material CreateRandomMaterial();
 
   // Sphere Addition Function
-  void AddRandomSpheres(int numSpheres);
+  void AddRandomSpheres(int numSpheres, int minSphereRadis, int maxSphereRadius);
 
   // Add Ground Function
   void AddGround(Material groundMaterial);
 
   // Main Function or Initialization Function
-  void CreateScene(int numSpheres);
+  void CreateScene(int numSpheres, int minSphereRadis, int maxSphereRadius);
 
 
   /// Create all acceleration structures, bottom and top

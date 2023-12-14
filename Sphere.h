@@ -19,6 +19,8 @@ public:
 	Sphere(float radius, ComPtr<ID3D12Device5> device);
 	UINT getSphereInstanceCount() { return sphereInstanceCount; }
 	void addDerivedInstance() override;
+	void addSphereInstance(XMMATRIX transformation, Material material, std::wstring hitGroup, std::wstring shadowHitGroup, float radius);
+
 	SphereInfo getSphereInfoForInstance(UINT index) { return m_sphereInfos[index];  }
 };
 

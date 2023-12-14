@@ -87,11 +87,6 @@ static const uint LARGE_PRIME1 = 198491317;
 static const uint LARGE_PRIME2 = 6542989;
 static const uint LARGE_PRIME3 = 7393931;
 
-// Seed generation with elapsed time and ray index
-uint GenerateSeed(uint2 pixelCoord, float elapsedTime, uint rayIndex) {
-	uint timeHash = uint(elapsedTime * 1000.0f) * LARGE_PRIME1;
-	return pixelCoord.x * LARGE_PRIME2 + pixelCoord.y * LARGE_PRIME1 + timeHash + rayIndex * LARGE_PRIME3;
-}
 
 // Hash-based random number generator
 float HashRandom(inout uint seed) {
@@ -106,6 +101,14 @@ float HashRandom(inout uint seed) {
 	seed += LARGE_PRIME2;
 	return sin(frac(float(seed) / 100000.0f));
 }
+// Seed generation with elapsed time and ray index
+uint GenerateSeed(uint2 pixelCoord, float elapsedTime, uint rayIndex) {
+	uint timeHash = uint(elapsedTime * 1000.0f) * LARGE_PRIME1;
+	HashRandom(timeHash);
+	return pixelCoord.x * LARGE_PRIME2 + pixelCoord.y * LARGE_PRIME1 + timeHash + rayIndex * LARGE_PRIME3;
+}
+
+
 
 // Generate a single random vector within a specified range
 float3 GenerateRandomVectorInRange(float minValue, float maxValue, inout uint seed) {
