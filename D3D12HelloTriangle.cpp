@@ -855,16 +855,15 @@ Material D3D12HelloTriangle::CreateRandomMaterial() {
 }
 
 // Sphere Addition Function
-void D3D12HelloTriangle::AddRandomSpheres(int numSpheres, int minSphereRadius, int maxSphereRadius) {
-	int gridSize = ceil(sqrt(numSpheres)); // Determine the grid size
-	float spacing = maxSphereRadius * 5.0f; // Define the spacing between the spheres, depends on their size
+void D3D12HelloTriangle::AddRandomSpheres(int numSpheres, float minSphereRadius, float maxSphereRadius) {
+	int gridSize = ceil(sqrt(numSpheres)); 
+	float spacing = maxSphereRadius * 5.0f; 
 	float jitter = spacing * 0.5f; // Maximum random displacement from the grid position
 
 	for (int i = 0; i < numSpheres; ++i) {
 		int gridX = i % gridSize;
 		int gridZ = i / gridSize;
 
-		// Calculate the base grid position
 		float baseX = gridX * spacing + 2.0f;
 		float baseZ = gridZ * spacing + 2.0f;
 
@@ -874,32 +873,56 @@ void D3D12HelloTriangle::AddRandomSpheres(int numSpheres, int minSphereRadius, i
 
 		// Random center position
 		XMVECTOR center = XMVectorSet(
-			baseX + offsetX, // x
-			0.42, // y
-			baseZ + offsetZ, // z
+			baseX + offsetX, 
+			0.42, 
+			baseZ + offsetZ, 
 			0.0f
 		);
 
 		Material sphereMat = CreateRandomMaterial();
 
+		float randomScale = (static_cast<float>(rand()) / static_cast<float>(RAND_MAX));
+		float radius = minSphereRadius + randomScale * (maxSphereRadius - minSphereRadius);
+
+
 		// Determine the hit group based on the matte property
 		LPCWSTR hitGroupName;
 		if (sphereMat.matte < 0.8f) {
 			hitGroupName = L"SphereHitGroupLambertian";
+			radius -= 0.1f;
 		}
 		else if (sphereMat.matte < 0.95f) {
 			hitGroupName = L"SphereHitGroupMetal";
 		}
 		else {
 			hitGroupName = L"SphereHitGroupDielectric";
+			radius += 0.1f;
 		}
 
-		float randomScale = (static_cast<float>(rand()) / static_cast<float>(RAND_MAX));
-		float radius = minSphereRadius + randomScale * (maxSphereRadius - minSphereRadius);
 		// Add sphere instance
 		m_sphere->addSphereInstance(XMMatrixTranslation(XMVectorGetX(center), radius+0.02, XMVectorGetZ(center)), sphereMat, hitGroupName, L"ShadowSphereHitGroup", radius);
 		m_instances.push_back({ m_sphere->asBuffers.pResult, m_sphere->getInstance(i).transform });
 	}
+	float bigMaterialOffset = (gridSize * spacing) / 2.0f;
+
+	Material bigGlassMaterial = CreateRandomMaterial();
+	bigGlassMaterial.refractionIndex = 1.5;
+
+	m_sphere->addSphereInstance(XMMatrixTranslation(0.0f + bigMaterialOffset, 1.0f, 0.0f + bigMaterialOffset) * maxSphereRadius, bigGlassMaterial , L"SphereHitGroupDielectric", L"ShadowSphereHitGroup", maxSphereRadius);
+	m_instances.push_back({ m_sphere->asBuffers.pResult, m_sphere->getInstance(numSpheres ).transform });
+
+	Material bigLambertianMaterial = CreateRandomMaterial();
+	bigLambertianMaterial.attenuation = XMVECTOR{ 0.4, 0.2, 0.1, 1.0f};
+
+	m_sphere->addSphereInstance(XMMatrixTranslation(-4.0f + bigMaterialOffset, 1, 0 + bigMaterialOffset) * maxSphereRadius, bigLambertianMaterial, L"SphereHitGroupLambertian", L"ShadowSphereHitGroup",  maxSphereRadius);
+	m_instances.push_back({ m_sphere->asBuffers.pResult, m_sphere->getInstance(numSpheres + 1).transform });
+
+	Material bigMetalMaterial = CreateRandomMaterial();
+	bigMetalMaterial.attenuation = XMVECTOR{ 0.7, 0.6, 0.5, 1.0f };
+	bigMetalMaterial.fuzz = 0.0f;
+
+	m_sphere->addSphereInstance(XMMatrixTranslation(4.0f + bigMaterialOffset, 1, 0 + bigMaterialOffset) * maxSphereRadius, bigMetalMaterial, L"SphereHitGroupMetal", L"ShadowSphereHitGroup", maxSphereRadius);
+	m_instances.push_back({ m_sphere->asBuffers.pResult, m_sphere->getInstance(numSpheres + 2).transform });
 }
 
 // Add Ground Function
@@ -910,7 +933,7 @@ void D3D12HelloTriangle::AddGround(Material groundMaterial) {
 }
 
 // Main Function or Initialization Function
-void D3D12HelloTriangle::CreateScene(int numSpheres, int minSphereRadius, int maxSphereRadius) {
+void D3D12HelloTriangle::CreateScene(int numSpheres, float minSphereRadius, float maxSphereRadius) {
 	// Initialize random seed
 	srand(static_cast<unsigned int>(time(nullptr)));
 
@@ -954,8 +977,8 @@ void D3D12HelloTriangle::CreateAccelerationStructures() {
 
 
   int numSpheres = 100;
-  int maxSphereRadius = 1.0f;
-  int minSphereRadius = 0.4f;
+  float maxSphereRadius = 1.0f;
+  float minSphereRadius = 0.4f;
 
   //ProceduralGeometry proceduralSphere(-0.0f, -0.0f, -0.0f, 1.0f, 1.0f, 1.0f, m_device);
   m_sphere = new Sphere( 1.0f, m_device);

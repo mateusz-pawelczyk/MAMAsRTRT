@@ -4,11 +4,11 @@ C:\Users\ma2880pa-s\Program\MAMAsRTRT\BaseObjectClass.h(78): warning C4267: 'ret
 C:\Users\ma2880pa-s\Program\MAMAsRTRT\OBJ_Loader.h(949): warning C4244: 'initializing': conversion from 'double' to 'float', possible loss of data
 C:\Users\ma2880pa-s\Program\MAMAsRTRT\D3D12HelloTriangle.cpp(850): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
 C:\Users\ma2880pa-s\Program\MAMAsRTRT\D3D12HelloTriangle.cpp(859): warning C4244: 'initializing': conversion from 'double' to 'int', possible loss of data
-C:\Users\ma2880pa-s\Program\MAMAsRTRT\D3D12HelloTriangle.cpp(881): warning C4305: 'argument': truncation from 'double' to 'float'
-C:\Users\ma2880pa-s\Program\MAMAsRTRT\D3D12HelloTriangle.cpp(900): warning C4244: 'argument': conversion from 'double' to 'float', possible loss of data
-C:\Users\ma2880pa-s\Program\MAMAsRTRT\D3D12HelloTriangle.cpp(957): warning C4244: 'initializing': conversion from 'float' to 'int', possible loss of data
-C:\Users\ma2880pa-s\Program\MAMAsRTRT\D3D12HelloTriangle.cpp(958): warning C4244: 'initializing': conversion from 'float' to 'int', possible loss of data
-C:\Users\ma2880pa-s\Program\MAMAsRTRT\D3D12HelloTriangle.cpp(962): warning C4244: 'argument': conversion from 'int' to 'float', possible loss of data
+C:\Users\ma2880pa-s\Program\MAMAsRTRT\D3D12HelloTriangle.cpp(880): warning C4305: 'argument': truncation from 'double' to 'float'
+C:\Users\ma2880pa-s\Program\MAMAsRTRT\D3D12HelloTriangle.cpp(903): warning C4244: 'argument': conversion from 'double' to 'float', possible loss of data
+C:\Users\ma2880pa-s\Program\MAMAsRTRT\D3D12HelloTriangle.cpp(915): warning C4305: 'initializing': truncation from 'double' to 'float'
+C:\Users\ma2880pa-s\Program\MAMAsRTRT\D3D12HelloTriangle.cpp(921): warning C4305: 'initializing': truncation from 'double' to 'float'
+C:\Users\ma2880pa-s\Program\MAMAsRTRT\D3D12HelloTriangle.cpp(985): warning C4244: 'argument': conversion from 'int' to 'float', possible loss of data
   D3D12HelloTriangle.vcxproj -> C:\Users\ma2880pa-s\Program\MAMAsRTRT\bin\x64\Debug\D3D12HelloTriangle.exe
   Copy dxcompiler.dll and dxil.dll to target folder
   
@@ -16,7 +16,7 @@ C:\Users\ma2880pa-s\Program\MAMAsRTRT\D3D12HelloTriangle.cpp(962): warning C4244
      ROBOCOPY     ::     Robust File Copy for Windows                              
   -------------------------------------------------------------------------------
   
-    Started : den 14 december 2023 10:17:58
+    Started : den 14 december 2023 11:00:44
      Source : C:\Program Files (x86)\Windows Kits\10\bin\10.0.17763.0\x64\
        Dest : C:\Users\ma2880pa-s\Program\MAMAsRTRT\bin\x64\Debug\
   
@@ -36,5 +36,5 @@ C:\Users\ma2880pa-s\Program\MAMAsRTRT\D3D12HelloTriangle.cpp(962): warning C4244
      Files :         2         0         2         0         0         0
      Bytes :   12.85 m         0   12.85 m         0         0         0
      Times :   0:00:00   0:00:00                       0:00:00   0:00:00
-     Ended : den 14 december 2023 10:17:58
+     Ended : den 14 december 2023 11:00:44
   
