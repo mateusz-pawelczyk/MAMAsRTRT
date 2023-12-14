@@ -50,8 +50,9 @@ float3 objectRayDirection()
 	if (discriminant > 0) {
 		float sqrtd = sqrt(discriminant);
 		float t = (-half_b - sqrtd) / a; // Only considering the nearest intersection
+		float t2 = (-half_b + sqrtd) / a; // Only considering the nearest intersection
 
-		if (t >= 0) {
+		if (t >= RayTMin()) {
 			float3 P = objectRayOrigin() + t * objectRayDirection();
 			float3 N = normalize(P - sphere.center); // Normal at the intersection
 
@@ -59,9 +60,21 @@ float3 objectRayDirection()
 			float u = atan2(N.z, N.x) / (2 * 3.14159265359f);
 			float v = (acos(N.y / sphere.radius) / 3.14159265359f);
 			attr.uv = float2(u, 1.0f - v); // Adjust V if necessary
-			attr.normal = P;
+			attr.normal = normalize(P);
 			ReportHit(t, 0, attr);
 		}
+		//else if (t2 > RayTMin()) // if 
+		//{
+		//	float3 P = objectRayOrigin() + t2 * objectRayDirection();
+		//	float3 N = normalize(P - sphere.center); // Normal at the intersection
+
+		//	// Calculate UV coordinates
+		//	float u = atan2(N.z, N.x) / (2 * 3.14159265359f);
+		//	float v = (acos(N.y / sphere.radius) / 3.14159265359f);
+		//	attr.uv = float2(u, 1.0f - v); // Adjust V if necessary
+		//	attr.normal = P;
+		//	ReportHit(t2, 0, attr);
+		//}
 	}
 	
 	

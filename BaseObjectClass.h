@@ -68,7 +68,6 @@ public:
 	AccelerationStructureBuffers asBuffers;
 	D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAGS buildFlags;
 
-	virtual void addInstance(Material material, std::wstring hitGroup, std::wstring shadowHitGroup);
 	virtual void addInstance(XMMATRIX transformation, Material material, std::wstring hitGroup, std::wstring shadowHitGroup);
 	void transformInstance(XMMATRIX transformation, UINT index);
 	void setTransformInstance(XMMATRIX transformation, UINT index);

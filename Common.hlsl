@@ -179,7 +179,7 @@ float3 random_on_hemisphere(float3 normal, inout uint seed) {
 
 
 
-float3 refract(float3 uv, float3 n, double etai_over_etat) {
+float3 refract(float3 uv, float3 n, float etai_over_etat) {
 	float cos_theta = min(dot(-uv, n), 1.0);
 	float3 r_out_perp = etai_over_etat * (uv + cos_theta * n);
 	float3 r_out_parallel = -sqrt(abs(1.0 - dot(r_out_perp, r_out_perp))) * n;

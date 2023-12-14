@@ -162,15 +162,15 @@ float3 HitWorldPosition()
 
 
 [shader("closesthit")]
-void SphereClosestHitLambertian(inout HitInfo payload, SphereAttributes attrib) 
+void SphereClosestHitLambertian(inout HitInfo payload, SphereAttributes attrib)
 {
 	if (payload.depth == 0) {
 		payload.colorAndDistance = float4(0.0f, 0.0f, 0.0f, RayTCurrent());
 		return;
 	}
 
-	float3 cameraPos = GetCameraPositionFromViewMatrix(viewI);	
-	float3 hitPosition = HitWorldPosition();	
+	float3 cameraPos = GetCameraPositionFromViewMatrix(viewI);
+	float3 hitPosition = HitWorldPosition();
 
 	RayDesc ray;
 	ray.Origin = hitPosition;
@@ -197,9 +197,32 @@ void SphereClosestHitLambertian(inout HitInfo payload, SphereAttributes attrib)
 	HitInfo scatteredPayload;
 	scatteredPayload.colorAndDistance = float4(0, 0, 0, 0);
 	scatteredPayload.depth = payload.depth - 1;
-	TraceRay(SceneBVH, RAY_FLAG_NONE, 0xFF, 0, 0, 0, ray, scatteredPayload);
+	float3 color;
+	/*if (payload.colorAndDistance.w != 1.0f)
+	{*/
+		TraceRay(SceneBVH, RAY_FLAG_NONE, 0xFF, 0, 0, 0, ray, scatteredPayload);
+		color = albedo * scatteredPayload.colorAndDistance.rgb;
+	//}
+	//else
+	//{
+	//	// Phong shading logic
+	//	float3 V = normalize(-D); // View direction
+	//	float3 L = normalize(hitPosition - lightPosition); // Light direction
+	//	float3 R = reflect(-L, N); // Reflection direction
 
-	payload.colorAndDistance = float4(albedo * scatteredPayload.colorAndDistance.rgb, RayTCurrent());
+	//	// Diffuse component
+	//	float diff = max(dot(N, L), 0.0f);
+
+	//	
+
+	//	// Assume a simple ambient term
+	//	float3 ambient = 0.1 * material.albedo.rgb;
+
+	//	// Calculate final color
+	//	color = ambient + material.albedo.rgb * diff;
+	//}
+
+	payload.colorAndDistance = float4(color, RayTCurrent());
 }
 
 
@@ -278,7 +301,7 @@ void SphereClosestHitDielectric(inout HitInfo payload, SphereAttributes attrib)
 	uint seed = GenerateSeed(DispatchRaysIndex().xy, elapsedTime, payload.colorAndDistance.w);	// Seed to generate random numbers
 
 
-	float  eta  = material.refractionIndex;
+	float  eta  = 1.0f / material.refractionIndex;
 
 	if (dot(N, D) > 0.0f) {
 		eta = 1.0f / eta;

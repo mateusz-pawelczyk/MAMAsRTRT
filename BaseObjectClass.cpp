@@ -13,20 +13,6 @@ inline void ThrowIfFailed(HRESULT hr)
 	}
 }
 
-void BaseObjectClass::addInstance(Material material, std::wstring hitGroup, std::wstring shadowHitGroup)
-{
-	Instance instance;
-	instance.transform = XMMatrixIdentity();
-	instance.invTransform = XMMatrixIdentity();
-
-	m_instances.push_back(instance);
-	m_materials.push_back(material);
-	m_hitGroups.push_back({ hitGroup, shadowHitGroup });
-
-	addDerivedInstance();
-
-	totalInstanceCount++;
-}
 
 void BaseObjectClass::addInstance(XMMATRIX transformation, Material material, std::wstring hitGroup, std::wstring shadowHitGroup)
 {

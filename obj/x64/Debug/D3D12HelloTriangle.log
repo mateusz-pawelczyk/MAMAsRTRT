@@ -1,10 +1,34 @@
-﻿  D3D12HelloTriangle.cpp
+﻿  BLASBuilder.cpp
 C:\Users\ma2880pa-s\Program\MAMAsRTRT\ObjectStructs.h(12): warning C4305: 'argument': truncation from 'double' to 'float'
-C:\Users\ma2880pa-s\Program\MAMAsRTRT\BaseObjectClass.h(79): warning C4267: 'return': conversion from 'size_t' to 'UINT', possible loss of data
+C:\Users\ma2880pa-s\Program\MAMAsRTRT\BaseObjectClass.h(78): warning C4267: 'return': conversion from 'size_t' to 'UINT', possible loss of data
+C:\Users\ma2880pa-s\Program\MAMAsRTRT\BLASBuilder.cpp(127): warning C4267: '=': conversion from 'size_t' to 'UINT', possible loss of data
+C:\Users\ma2880pa-s\Program\MAMAsRTRT\BLASBuilder.cpp(205): warning C4267: '=': conversion from 'size_t' to 'UINT', possible loss of data
+  BaseObjectClass.cpp
+C:\Users\ma2880pa-s\Program\MAMAsRTRT\ObjectStructs.h(12): warning C4305: 'argument': truncation from 'double' to 'float'
+C:\Users\ma2880pa-s\Program\MAMAsRTRT\BaseObjectClass.h(78): warning C4267: 'return': conversion from 'size_t' to 'UINT', possible loss of data
+  D3D12HelloTriangle.cpp
+C:\Users\ma2880pa-s\Program\MAMAsRTRT\ObjectStructs.h(12): warning C4305: 'argument': truncation from 'double' to 'float'
+C:\Users\ma2880pa-s\Program\MAMAsRTRT\BaseObjectClass.h(78): warning C4267: 'return': conversion from 'size_t' to 'UINT', possible loss of data
 C:\Users\ma2880pa-s\Program\MAMAsRTRT\OBJ_Loader.h(949): warning C4244: 'initializing': conversion from 'double' to 'float', possible loss of data
 C:\Users\ma2880pa-s\Program\MAMAsRTRT\D3D12HelloTriangle.cpp(850): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
 C:\Users\ma2880pa-s\Program\MAMAsRTRT\D3D12HelloTriangle.cpp(859): warning C4244: 'initializing': conversion from 'double' to 'int', possible loss of data
 C:\Users\ma2880pa-s\Program\MAMAsRTRT\D3D12HelloTriangle.cpp(881): warning C4305: 'argument': truncation from 'double' to 'float'
+  Main.cpp
+C:\Users\ma2880pa-s\Program\MAMAsRTRT\ObjectStructs.h(12): warning C4305: 'argument': truncation from 'double' to 'float'
+C:\Users\ma2880pa-s\Program\MAMAsRTRT\BaseObjectClass.h(78): warning C4267: 'return': conversion from 'size_t' to 'UINT', possible loss of data
+  Mesh.cpp
+C:\Users\ma2880pa-s\Program\MAMAsRTRT\ObjectStructs.h(12): warning C4305: 'argument': truncation from 'double' to 'float'
+C:\Users\ma2880pa-s\Program\MAMAsRTRT\BaseObjectClass.h(78): warning C4267: 'return': conversion from 'size_t' to 'UINT', possible loss of data
+  Plane.cpp
+C:\Users\ma2880pa-s\Program\MAMAsRTRT\ObjectStructs.h(12): warning C4305: 'argument': truncation from 'double' to 'float'
+C:\Users\ma2880pa-s\Program\MAMAsRTRT\BaseObjectClass.h(78): warning C4267: 'return': conversion from 'size_t' to 'UINT', possible loss of data
+  ProceduralGeometry.cpp
+C:\Users\ma2880pa-s\Program\MAMAsRTRT\ObjectStructs.h(12): warning C4305: 'argument': truncation from 'double' to 'float'
+C:\Users\ma2880pa-s\Program\MAMAsRTRT\BaseObjectClass.h(78): warning C4267: 'return': conversion from 'size_t' to 'UINT', possible loss of data
+  Sphere.cpp
+C:\Users\ma2880pa-s\Program\MAMAsRTRT\ObjectStructs.h(12): warning C4305: 'argument': truncation from 'double' to 'float'
+C:\Users\ma2880pa-s\Program\MAMAsRTRT\BaseObjectClass.h(78): warning C4267: 'return': conversion from 'size_t' to 'UINT', possible loss of data
+  Generating Code...
   D3D12HelloTriangle.vcxproj -> C:\Users\ma2880pa-s\Program\MAMAsRTRT\bin\x64\Debug\D3D12HelloTriangle.exe
   Copy dxcompiler.dll and dxil.dll to target folder
   
@@ -12,7 +36,7 @@ C:\Users\ma2880pa-s\Program\MAMAsRTRT\D3D12HelloTriangle.cpp(881): warning C4305
      ROBOCOPY     ::     Robust File Copy for Windows                              
   -------------------------------------------------------------------------------
   
-    Started : den 14 december 2023 08:36:11
+    Started : den 14 december 2023 09:36:01
      Source : C:\Program Files (x86)\Windows Kits\10\bin\10.0.17763.0\x64\
        Dest : C:\Users\ma2880pa-s\Program\MAMAsRTRT\bin\x64\Debug\
   
@@ -32,5 +56,5 @@ C:\Users\ma2880pa-s\Program\MAMAsRTRT\D3D12HelloTriangle.cpp(881): warning C4305
      Files :         2         0         2         0         0         0
      Bytes :   12.85 m         0   12.85 m         0         0         0
      Times :   0:00:00   0:00:00                       0:00:00   0:00:00
-     Ended : den 14 december 2023 08:36:11
+     Ended : den 14 december 2023 09:36:01
   
