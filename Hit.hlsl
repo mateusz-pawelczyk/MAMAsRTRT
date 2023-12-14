@@ -410,7 +410,7 @@ float3 HitAttribute(float3 vertexAttribute[3], BuiltInTriangleIntersectionAttrib
 	float3 N = float3(0.0f, 1.0f, 0.0f);		// Normal
 	Material material = g_Materials[InstanceID()];	// Material properties
 
-	uint seed = GenerateSeed(DispatchRaysIndex().xy, elapsedTime, payload.colorAndDistance.w);	// Seed to generate random numbers
+	uint seed = GenerateSeed(DispatchRaysIndex().xy, elapsedTime, payload.colorAndDistance.w);	
 
 
 	float3 albedo = material.albedo.rgb;
@@ -431,39 +431,36 @@ float3 HitAttribute(float3 vertexAttribute[3], BuiltInTriangleIntersectionAttrib
 
 
 	// AO parameters
-	const int numAOsamples = 16; 
+	const int numAOsamples = 4; 
 	float occlusionFactor = 0.0f;
 
-	//// Cast rays in the hemisphere to check for occlusion
-	//for (int i = 0; i < numAOsamples; ++i) {
-	//	float3 randomDir = random_unit_vector(seed);
-	//	if (dot(randomDir, N) < 0) {
-	//		randomDir = -randomDir; // Ensure we're in the same hemisphere as the normal
-	//	}
+	// Cast rays in the hemisphere to check for occlusion
+	for (int i = 0; i < numAOsamples; ++i) {
+		seed = GenerateSeed(DispatchRaysIndex().xy, elapsedTime, payload.colorAndDistance.w);	
+		float3 randomDir = random_on_hemisphere(N, seed);
 
-	//	RayDesc aoRay;
-	//	aoRay.Origin = hitPosition; 
-	//	aoRay.Direction = randomDir;
-	//	aoRay.TMin = 0.01f;
-	//	aoRay.TMax = 5.0f; // Limit the AO rays to a certain distance
+		RayDesc aoRay;
+		aoRay.Origin = hitPosition; 
+		aoRay.Direction = randomDir;
+		aoRay.TMin = 0.01f;
+		aoRay.TMax = 5.0f; 
 
-	//	// Trace the ray
-	//	HitInfo aoPayload;
-	//	aoPayload.colorAndDistance = float4(0, 0, 0, 0);
-	//	aoPayload.depth = 0;
-	//	TraceRay(SceneBVH, RAY_FLAG_SKIP_CLOSEST_HIT_SHADER | RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH, 0xFF, 0, 0, 0, aoRay, aoPayload);
+		// Trace the ray
+		ShadowHitInfo aoPayload;
+		aoPayload.isHit = true;
+		TraceRay(SceneBVH, RAY_FLAG_SKIP_CLOSEST_HIT_SHADER | RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH, 0xFF, 1, 0, 1, aoRay, aoPayload); // 
 
-	//	// If the AO ray hits something, increment the occlusion factor
-	//	if (aoPayload.colorAndDistance.w > 0) {
-	//		occlusionFactor += 1.0f;
-	//	}
-	//}
+		// If the AO ray hits something, increment the occlusion factor
+		if (aoPayload.isHit) {
+			occlusionFactor += 1.0f;
+		}
+	}
 
-	//// Final AO factor is the ratio of occluded rays to total rays
-	//occlusionFactor /= numAOsamples;
+	// Final AO factor is the ratio of occluded rays to total rays
+	occlusionFactor /= numAOsamples;
 
 	
-
+	//* scatteredPayload.colorAndDistance.rgb
 	payload.colorAndDistance = float4(albedo * scatteredPayload.colorAndDistance.rgb * (1.0f - occlusionFactor) , RayTCurrent());
 
 

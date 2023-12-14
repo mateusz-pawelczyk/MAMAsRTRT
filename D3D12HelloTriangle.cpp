@@ -177,6 +177,7 @@ void D3D12HelloTriangle::LoadPipeline() {
                             // flush on it.
       Win32Application::GetHwnd(), &swapChainDesc, nullptr, nullptr,
       &swapChain));
+  // FULLSCREEN START - comment out if not wanting fullscreen mode.
   //swapChain->SetFullscreenState(TRUE, nullptr);
   //swapChain->ResizeBuffers(FrameCount, m_screenWidth, m_screenHeight, DXGI_FORMAT_R8G8B8A8_UNORM, DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH);
   //SetWindowLongPtr(Win32Application::GetHwnd(), GWL_STYLE, WS_POPUP);
@@ -185,6 +186,8 @@ void D3D12HelloTriangle::LoadPipeline() {
   //// This sample does not support fullscreen transitions.
   //ThrowIfFailed(factory->MakeWindowAssociation(Win32Application::GetHwnd(),
   //                                             DXGI_MWA_NO_ALT_ENTER));
+  // FULLSCREEN END
+
 
   ThrowIfFailed(swapChain.As(&m_swapChain));
   m_frameIndex = m_swapChain->GetCurrentBackBufferIndex();
@@ -448,6 +451,7 @@ void D3D12HelloTriangle::OnUpdate() {
   UpdateSceneConstantBuffer();
   m_sphere->updateInstanceBuffers();
   m_sphere->updateMaterialBuffers();
+  //m_instances[2].second *= XMMatrixTranslation(sin(elapsedTime/100.f) * 5.0f, 0.0f, 0.0f);
   // #DXR Extra - Refitting
   // Increment the time counter at each frame, and update the corresponding
   // instance matrix of the first triangle to animate its position
@@ -522,56 +526,7 @@ void D3D12HelloTriangle::PopulateCommandList() {
 
   m_commandList->OMSetRenderTargets(1, &rtvHandle, FALSE, &dsvHandle);
 
-  // Record commands.
-  // #DXR
-  if (m_raster) {
-    // #DXR Extra: Depth Buffering
-    m_commandList->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH,
-                                         1.0f, 0, 0, nullptr);
-    // #DXR Extra: Perspective Camera
-    std::vector<ID3D12DescriptorHeap *> heaps = {m_constHeap.Get()};
-    m_commandList->SetDescriptorHeaps(static_cast<UINT>(heaps.size()),
-                                      heaps.data());
-    // set the root descriptor table 0 to the constant buffer descriptor heap
-    m_commandList->SetGraphicsRootDescriptorTable(
-        0, m_constHeap->GetGPUDescriptorHandleForHeapStart());
-    const float clearColor[] = {0.0f, 0.2f, 0.4f, 1.0f};
-    m_commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-    m_commandList->ClearRenderTargetView(rtvHandle, clearColor, 0, nullptr);
-
-    // #DXR Extra - Refitting
-    D3D12_GPU_DESCRIPTOR_HANDLE handle =
-        m_constHeap->GetGPUDescriptorHandleForHeapStart();
-    // Access to the camera buffer, 1st parameter of the root signature
-    m_commandList->SetGraphicsRootDescriptorTable(0, handle);
-    // Access to the per-instance properties buffer, 2nd parameter of the root
-    // signature
-    m_commandList->SetGraphicsRootDescriptorTable(1, handle);
-    // Instance index in the per-instance properties buffer, 3rd parameter of
-    // the root signature Here we set the value to 0, and since we have only 1
-    // constant, the offset is 0 as well
-    m_commandList->SetGraphicsRoot32BitConstant(2, 0, 0);
-
-    // #DXR Extra: Indexed Geometry
-    // In a way similar to triangle rendering, rasterize the Menger Sponge
-    //m_commandList->IASetVertexBuffers(0, 1, &m_mengerVBView);
-    //m_commandList->IASetIndexBuffer(&m_mengerIBView);
-    //m_commandList->DrawIndexedInstanced(m_mengerIndexCount, 1, 0, 0, 0);
-
-	//m_commandList->IASetVertexBuffers(0, 1, &m_sphereVBView);
-	//m_commandList->IASetIndexBuffer(&m_sphereIBView);
-	//m_commandList->DrawIndexedInstanced(m_sphereIndexCount, 1, 0, 0, 0);
-
-    // Instance index in the per-instance properties buffer, 3rd parameter of
-    // the root signature Here we set the value to 0, and since we have only 1
-    // constant, the offset is 0 as well
-    m_commandList->SetGraphicsRoot32BitConstant(2, 1, 0);
-    // #DXR Extra: Per-Instance Data
-    // In a way similar to triangle rendering, rasterize the plane
-    m_commandList->IASetVertexBuffers(0, 1, &m_planeBufferView);
-    m_commandList->DrawInstanced(6, 1, 0, 0);
-
-  } else {
+ 
     // #DXR Extra - Refitting
     // Refit the top-level acceleration structure to account for the new
     // transform matrix of the triangle. Note that the build contains a barrier,
@@ -658,7 +613,7 @@ void D3D12HelloTriangle::PopulateCommandList() {
         m_renderTargets[m_frameIndex].Get(), D3D12_RESOURCE_STATE_COPY_DEST,
         D3D12_RESOURCE_STATE_RENDER_TARGET);
     m_commandList->ResourceBarrier(1, &transition);
-  }
+  
 
   // Indicate that the back buffer will now be used to present.
   m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(
@@ -908,20 +863,20 @@ void D3D12HelloTriangle::AddRandomSpheres(int numSpheres, float minSphereRadius,
 	Material bigGlassMaterial = CreateRandomMaterial();
 	bigGlassMaterial.refractionIndex = 1.5;
 
-	m_sphere->addSphereInstance(XMMatrixTranslation(0.0f + bigMaterialOffset, 1.0f, 0.0f + bigMaterialOffset) * maxSphereRadius, bigGlassMaterial , L"SphereHitGroupDielectric", L"ShadowSphereHitGroup", maxSphereRadius);
+	m_sphere->addSphereInstance(XMMatrixTranslation(0.0f + bigMaterialOffset, 1.011f, 0.0f + bigMaterialOffset) , bigGlassMaterial , L"SphereHitGroupDielectric", L"ShadowSphereHitGroup", 1.0f);
 	m_instances.push_back({ m_sphere->asBuffers.pResult, m_sphere->getInstance(numSpheres ).transform });
 
 	Material bigLambertianMaterial = CreateRandomMaterial();
 	bigLambertianMaterial.attenuation = XMVECTOR{ 0.4, 0.2, 0.1, 1.0f};
 
-	m_sphere->addSphereInstance(XMMatrixTranslation(-4.0f + bigMaterialOffset, 1, 0 + bigMaterialOffset) * maxSphereRadius, bigLambertianMaterial, L"SphereHitGroupLambertian", L"ShadowSphereHitGroup",  maxSphereRadius);
+	m_sphere->addSphereInstance(XMMatrixTranslation((-4.0f + bigMaterialOffset), 1.011f, (0 + bigMaterialOffset)), bigLambertianMaterial, L"SphereHitGroupLambertian", L"ShadowSphereHitGroup", 1.0f);
 	m_instances.push_back({ m_sphere->asBuffers.pResult, m_sphere->getInstance(numSpheres + 1).transform });
 
 	Material bigMetalMaterial = CreateRandomMaterial();
 	bigMetalMaterial.attenuation = XMVECTOR{ 0.7, 0.6, 0.5, 1.0f };
 	bigMetalMaterial.fuzz = 0.0f;
 
-	m_sphere->addSphereInstance(XMMatrixTranslation(4.0f + bigMaterialOffset, 1, 0 + bigMaterialOffset) * maxSphereRadius, bigMetalMaterial, L"SphereHitGroupMetal", L"ShadowSphereHitGroup", maxSphereRadius);
+	m_sphere->addSphereInstance(XMMatrixTranslation((4.0f + bigMaterialOffset), 1.011f, (0 + bigMaterialOffset)), bigMetalMaterial, L"SphereHitGroupMetal", L"ShadowSphereHitGroup", 1.0f);
 	m_instances.push_back({ m_sphere->asBuffers.pResult, m_sphere->getInstance(numSpheres + 2).transform });
 }
 
@@ -935,7 +890,7 @@ void D3D12HelloTriangle::AddGround(Material groundMaterial) {
 // Main Function or Initialization Function
 void D3D12HelloTriangle::CreateScene(int numSpheres, float minSphereRadius, float maxSphereRadius) {
 	// Initialize random seed
-	srand(static_cast<unsigned int>(time(nullptr)));
+	srand(static_cast<unsigned int>(m_scene.elapsedTime));
 
 	// Define ground material and add ground
 	Material groundMaterial;
@@ -976,13 +931,14 @@ void D3D12HelloTriangle::CreateAccelerationStructures() {
   BaseObjectClass::totalInstanceCount = 0;
 
 
-  int numSpheres = 100;
-  float maxSphereRadius = 1.0f;
-  float minSphereRadius = 0.4f;
+  int numSpheres = 1000;
+  float maxSphereRadius = 0.6f;
+  float minSphereRadius = 0.2f;
+  float extraSpace = 5.0f;
 
   //ProceduralGeometry proceduralSphere(-0.0f, -0.0f, -0.0f, 1.0f, 1.0f, 1.0f, m_device);
   m_sphere = new Sphere( 1.0f, m_device);
-  m_planeMesh = new Plane(XMFLOAT3(-numSpheres, 0.f, -numSpheres), XMFLOAT3(numSpheres, 0.f, numSpheres), m_device);
+  m_planeMesh = new Plane(XMFLOAT3(-extraSpace, 0.f, -extraSpace), XMFLOAT3(5 * ceil(sqrt(numSpheres)) * maxSphereRadius + extraSpace, 0.f,5 * ceil(sqrt(numSpheres)) * maxSphereRadius+ extraSpace), m_device);
 
 
   BLASBuilder blasBuilder(m_device);
