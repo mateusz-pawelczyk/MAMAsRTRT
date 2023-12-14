@@ -178,14 +178,14 @@ void D3D12HelloTriangle::LoadPipeline() {
       Win32Application::GetHwnd(), &swapChainDesc, nullptr, nullptr,
       &swapChain));
   // FULLSCREEN START - comment out if not wanting fullscreen mode.
-  //swapChain->SetFullscreenState(TRUE, nullptr);
-  //swapChain->ResizeBuffers(FrameCount, m_screenWidth, m_screenHeight, DXGI_FORMAT_R8G8B8A8_UNORM, DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH);
-  //SetWindowLongPtr(Win32Application::GetHwnd(), GWL_STYLE, WS_POPUP);
-  //SetWindowPos(Win32Application::GetHwnd(), HWND_TOP, 0, 0, m_screenWidth, m_screenHeight, SWP_NOZORDER | SWP_FRAMECHANGED | SWP_SHOWWINDOW);
+  swapChain->SetFullscreenState(TRUE, nullptr);
+  swapChain->ResizeBuffers(FrameCount, m_screenWidth, m_screenHeight, DXGI_FORMAT_R8G8B8A8_UNORM, DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH);
+  SetWindowLongPtr(Win32Application::GetHwnd(), GWL_STYLE, WS_POPUP);
+  SetWindowPos(Win32Application::GetHwnd(), HWND_TOP, 0, 0, m_screenWidth, m_screenHeight, SWP_NOZORDER | SWP_FRAMECHANGED | SWP_SHOWWINDOW);
  
-  //// This sample does not support fullscreen transitions.
-  //ThrowIfFailed(factory->MakeWindowAssociation(Win32Application::GetHwnd(),
-  //                                             DXGI_MWA_NO_ALT_ENTER));
+  // This sample does not support fullscreen transitions.
+  ThrowIfFailed(factory->MakeWindowAssociation(Win32Application::GetHwnd(),
+                                               DXGI_MWA_NO_ALT_ENTER));
   // FULLSCREEN END
 
 
@@ -855,7 +855,7 @@ void D3D12HelloTriangle::AddRandomSpheres(int numSpheres, float minSphereRadius,
 		}
 
 		// Add sphere instance
-		m_sphere->addSphereInstance(XMMatrixTranslation(XMVectorGetX(center), radius+0.02, XMVectorGetZ(center)), sphereMat, hitGroupName, L"ShadowSphereHitGroup", radius);
+		m_sphere->addSphereInstance(XMMatrixTranslation(XMVectorGetX(center), radius+0.011, XMVectorGetZ(center)), sphereMat, hitGroupName, L"ShadowSphereHitGroup", radius);
 		m_instances.push_back({ m_sphere->asBuffers.pResult, m_sphere->getInstance(i).transform });
 	}
 	float bigMaterialOffset = (gridSize * spacing) / 2.0f;
@@ -964,11 +964,6 @@ void D3D12HelloTriangle::CreateAccelerationStructures() {
   //float padding;
 
   CreateScene(numSpheres, minSphereRadius, maxSphereRadius);
-
-
-
-
-
 
   m_instances.push_back({ sphereBottomLevelBuffers.pResult,  XMMatrixTranslation(0.6f, 0.01f, 0) });
 
@@ -1214,7 +1209,7 @@ void D3D12HelloTriangle::CreateRaytracingPipeline() {
   // then requires a trace depth of 1. Note that this recursion depth should be
   // kept to a minimum for best performance. Path tracing algorithms can be
   // easily flattened into a simple loop in the ray generation.
-  pipeline.SetMaxRecursionDepth(6);
+  pipeline.SetMaxRecursionDepth(12);
 
   // Compile the pipeline for execution on the GPU
   m_rtStateObject = pipeline.Generate();

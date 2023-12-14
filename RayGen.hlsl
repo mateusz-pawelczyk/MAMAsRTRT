@@ -28,7 +28,7 @@ cbuffer CameraParams : register(b0)
   // Initialize the ray payload
   HitInfo payload;
   payload.colorAndDistance = float4(0, 0, 0, 0);
-  payload.depth = 4;
+  payload.depth = 10;
   uint2 launchIndex = DispatchRaysIndex().xy;
   float2 dims = float2(DispatchRaysDimensions().xy);
   NumberGenerator ng;

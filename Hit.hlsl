@@ -459,6 +459,8 @@ float3 HitAttribute(float3 vertexAttribute[3], BuiltInTriangleIntersectionAttrib
 	//// Final AO factor is the ratio of occluded rays to total rays
 	//occlusionFactor /= numAOsamples;
 
+
+
 	
 	//* scatteredPayload.colorAndDistance.rgb
 	payload.colorAndDistance = float4(albedo * scatteredPayload.colorAndDistance.rgb * (1.0f - occlusionFactor) , RayTCurrent());
